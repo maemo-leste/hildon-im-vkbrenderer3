@@ -22,5 +22,5 @@ PKG_CHECK_MODULES(DEPS, gtk+-2.0 >= 2.4.0 gconf-2.0 > 2.0 glib-2.0 >= 2.20.3 x11
 AC_SUBST(DEPS_CFLAGS)
 AC_SUBST(DEPS_LIBS)
 
-AC_OUTPUT([ Makefile src/Makefile])
+AC_OUTPUT([ Makefile src/Makefile hildon-im-vkbrenderer3.pc])
 

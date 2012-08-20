@@ -19,3 +19,9 @@ Section: devel
 Architecture: any
 Depends: libhildon-im-vkbrenderer3 (= ${Source-Version})
 Description: Debugging symbols for Virtual Keyboard Widget for the Hildon Input Method
+
+Package: hildon-im-vkbrenderer3-dev
+Section: devel
+Architecture: any
+Depends: libhildon-im-vkbrenderer3 (= ${Source-Version})
+Description: Development package for Virtual Keyboard Widget for the Hildon Input Method

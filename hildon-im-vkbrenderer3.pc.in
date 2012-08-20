@@ -1,0 +1,11 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@/hildon-im-vkbrenderer/3
+
+Name: hildon-im-vkbrenderer3
+Description: hildon-im-vkbrenderer3
+Version: @PACKAGE_VERSION@
+Libs: -L${libdir} -lhildon-im-vkbrenderer3
+Cflags: -I${includedir}
+

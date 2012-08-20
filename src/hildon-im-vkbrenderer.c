@@ -27,6 +27,8 @@
 
 
 #include "hildon-vkb-renderer-marshal.h"
+#include "hildon-im-vkbrenderer.h"
+
 #include "imlayout_vkb.h"
 
 enum {
@@ -63,17 +65,6 @@ enum
 static guint
 signals[LAST_SIGNAL] = { 0, };
 
-#define HILDON_VKB_RENDERER_TYPE (hildon_vkb_renderer_get_type())
-
-#define HILDON_VKB_RENDERER(obj) GTK_CHECK_CAST(obj, hildon_vkb_renderer_get_type(), HildonVKBRenderer)
-#define HILDON_VKB_RENDERER_CLASS(klass) \
-        GTK_CHECK_CLASS_CAST(klass, hildon_vkb_renderer_get_type, \
-                             HildonVKBRendererClass)
-#define HILDON_IS_VKB_RENDERER(obj) \
-        GTK_CHECK_TYPE(obj, HILDON_VKB_RENDERER_TYPE )
-#define HILDON_VKB_RENDERER_GET_PRIVATE(obj) \
-        (G_TYPE_INSTANCE_GET_PRIVATE ((obj), HILDON_VKB_RENDERER_TYPE,\
-                                      HildonVKBRendererPrivate))
 
 #if 0
 #define tracef g_warning("%s\n",__func__);
@@ -81,19 +72,12 @@ signals[LAST_SIGNAL] = { 0, };
 #define tracef
 #endif
 
-typedef struct{
-  guint num_layouts;
-  guint *type;
-  gchar **label;
-  guint num_rows;
-}LayoutInfo;
-
 typedef struct {
  gchar *style;
  GtkStyle* gtk_style;
 }HildonVKBRendererKeyStyle;
 
-typedef struct {
+struct _HildonVKBRendererPrivate{
   vkb_layout_collection *layout_collection;
   vkb_layout *layout;
   vkb_sub_layout *sub_layout;
@@ -134,13 +118,7 @@ typedef struct {
   PangoFontDescription *font_desc;
   gboolean field_C0;
   gboolean shift_active;
-} HildonVKBRendererPrivate;
-
-typedef struct {
-  GtkWidget parent;
-  HildonVKBRendererPrivate * priv;
-}
-HildonVKBRenderer;
+} ;
 
 typedef struct {
   GtkWidgetClass parent;
@@ -412,7 +390,7 @@ error:
   return FALSE;
 }
 
-unsigned int
+guint
 hildon_vkb_renderer_get_numeric_sub(HildonVKBRenderer *renderer)
 {
   HildonVKBRendererPrivate *priv;
@@ -577,21 +555,24 @@ hildon_vkb_renderer_init (HildonVKBRenderer *self)
   g_signal_connect_data(self, "style-set", G_CALLBACK(theme_changed), self, 0, 0);
 }
 
-gboolean hildon_vkb_renderer_get_shift_active(HildonVKBRenderer * renderer)
+gboolean
+hildon_vkb_renderer_get_shift_active(HildonVKBRenderer * renderer)
 {
   tracef;
   g_return_val_if_fail(HILDON_IS_VKB_RENDERER(renderer),FALSE);
   return renderer->priv->shift_active;
 }
 
-void hildon_vkb_renderer_set_shift_active(HildonVKBRenderer *renderer, gboolean value)
+void
+hildon_vkb_renderer_set_shift_active(HildonVKBRenderer *renderer, gboolean value)
 {
   tracef;
   g_return_if_fail(HILDON_IS_VKB_RENDERER(renderer));
   renderer->priv->shift_active = value;
 }
 
-guint hildon_vkb_renderer_get_pressed_key_mode(HildonVKBRenderer * renderer)
+guint
+hildon_vkb_renderer_get_pressed_key_mode(HildonVKBRenderer * renderer)
 {
   tracef;
   g_return_val_if_fail(HILDON_IS_VKB_RENDERER(renderer),0);
@@ -614,7 +595,8 @@ hildon_vkb_renderer_release_cleanup(HildonVKBRendererPrivate *priv)
 }
 
 
-void layout_info_free(LayoutInfo *layout_info)
+void
+layout_info_free(HildonVKBRendererLayoutInfo *layout_info)
 {
   if ( layout_info )
   {
@@ -697,7 +679,7 @@ hildon_vkb_renderer_get_property (GObject *object,
       }
       else
       {
-        LayoutInfo *layout_info = (LayoutInfo *)g_malloc0(sizeof(LayoutInfo));
+        HildonVKBRendererLayoutInfo *layout_info = (HildonVKBRendererLayoutInfo *)g_malloc0(sizeof(HildonVKBRendererLayoutInfo));
 
         layout_info->num_layouts = priv->layout->num_sub_layouts;
         layout_info->type = (unsigned int *)g_malloc0(sizeof(guint*) * layout_info->num_layouts);
@@ -723,7 +705,7 @@ hildon_vkb_renderer_get_property (GObject *object,
     case HILDON_VKB_RENDERER_PROP_LAYOUTS:
       if ( priv->layout_collection )
       {
-        LayoutInfo *layout_info = (LayoutInfo *)g_malloc0(sizeof(LayoutInfo));
+        HildonVKBRendererLayoutInfo *layout_info = (HildonVKBRendererLayoutInfo *)g_malloc0(sizeof(HildonVKBRendererLayoutInfo));
 
         layout_info->num_layouts = priv->layout_collection->num_layouts;
         layout_info->type = (guint *)g_malloc0(sizeof(guint) * layout_info->num_layouts);
@@ -2399,7 +2381,7 @@ hildon_vkb_renderer_key_update(HildonVKBRenderer *self, vkb_key *key, int shift_
 }
 
 void
-hildon_vkb_renderer_set_sublayout_type(HildonVKBRenderer *renderer, int sub_layout_type)
+hildon_vkb_renderer_set_sublayout_type(HildonVKBRenderer *renderer, unsigned int sub_layout_type)
 {
   HildonVKBRendererPrivate *priv;
   vkb_sub_layout *sub_layout;
@@ -2471,7 +2453,8 @@ hildon_vkb_renderer_clear_dead_key(HildonVKBRenderer *renderer)
   }
 }
 
-gchar* hildon_vkb_renderer_get_dead_key(HildonVKBRenderer *renderer)
+gchar*
+hildon_vkb_renderer_get_dead_key(HildonVKBRenderer *renderer)
 {
   tracef;
 
