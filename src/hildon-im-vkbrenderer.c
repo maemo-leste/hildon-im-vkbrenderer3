@@ -123,7 +123,7 @@ struct _HildonVKBRendererPrivate{
 typedef struct {
   GtkWidgetClass parent;
   void (*input) (HildonVKBRenderer*, gchar*, gboolean);
-  void (*illegal_input) (HildonVKBRenderer*, gchar*, gboolean);
+  void (*illegal_input) (HildonVKBRenderer*, gchar*);
 } HildonVKBRendererClass;
 
 static GtkWidgetClass *parent_widget_class = NULL;
