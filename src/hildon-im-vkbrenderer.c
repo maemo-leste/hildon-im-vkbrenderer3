@@ -5,11 +5,11 @@
 
    This file is part of libhildon-im-vkbrenderer3.
 
-   Libbme is free software; you can redistribute it and/or modify
+   hildon-im-vkbrenderer3 is free software; you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License
    version 2.1 as published by the Free Software Foundation.
 
-   Libbme is distributed in the hope that it will be useful,
+   hildon-im-vkbrenderer3 is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
    Lesser General Public License for more details.

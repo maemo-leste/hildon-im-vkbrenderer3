@@ -1,3 +1,23 @@
+/**
+   @file hildon-im-vkbrenderer3.h
+
+   Copyright (C) 2012 Ivaylo Dimitrov <freemangordon@abv.bg>
+
+   This file is part of libhildon-im-vkbrenderer3.
+
+   hildon-im-vkbrenderer3 is free software; you can redistribute it and/or modify
+   it under the terms of the GNU Lesser General Public License
+   version 2.1 as published by the Free Software Foundation.
+
+   hildon-im-vkbrenderer3 is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with libhildon-im-vkbrenderer3. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #ifndef __HILDON_VKB_RENDERER_H_INCLDED__
 #define __HILDON_VKB_RENDERER_H_INCLDED__
 
