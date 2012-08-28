@@ -1728,19 +1728,19 @@ hildon_vkb_renderer_expose(GtkWidget *widget, GdkEventExpose *event)
   int v18;
   PangoLayoutIter *v19;
   vkb_key *v20;
-  unsigned int j; // [sp+24h] [bp-64h]@13
-  cairo_t *ct; // [sp+28h] [bp-60h]@11
-  gchar *text; // [sp+2Ch] [bp-5Ch]@23
-  gchar *tmp_text; // [sp+30h] [bp-58h]@23
-  signed int v27; // [sp+34h] [bp-54h]@22
-  signed int v28; // [sp+38h] [bp-50h]@22
-  GdkRectangle src; // [sp+48h] [bp-40h]@15
-  GdkRectangle dest; // [sp+58h] [bp-30h]@15
-  int v31; // [sp+68h] [bp-20h]@24
-  int height; // [sp+6Ch] [bp-1Ch]@11
-  int i; // [sp+70h] [bp-18h]@8
-  int n_rectangles; // [sp+74h] [bp-14h]@8
-  GdkRectangle *rectangles; // [sp+78h] [bp-10h]@8
+  unsigned int j;
+  cairo_t *ct;
+  gchar *text;
+  gchar *tmp_text;
+  signed int v27;
+  signed int v28;
+  GdkRectangle src;
+  GdkRectangle dest;
+  int v31;
+  int height;
+  int i;
+  int n_rectangles;
+  GdkRectangle *rectangles;
 
   HildonVKBRendererPrivate *priv;
 tracef;
