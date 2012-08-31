@@ -13,6 +13,11 @@ CFLAGS = -Wall -ggdb -Wno-format-extra-args
 
 DESTDIR = $(CURDIR)/debian/tmp
 
+# Use thumb mode if it enabled.
+ifneq (,$(findstring thumb,$(DEB_BUILD_OPTIONS)))
+	CFLAGS += -mthumb
+endif
+
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
 	CFLAGS += -O0
 else
