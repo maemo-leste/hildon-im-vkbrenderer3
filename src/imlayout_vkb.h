@@ -25,7 +25,7 @@ typedef struct _vkb_key
 	unsigned char unk1;
 	unsigned short key_flags;
 	unsigned char current_slide_key;
-	unsigned int unk3;
+	unsigned int width;
 	unsigned char byte_count;
 	char *label;
 	unsigned int special_font;

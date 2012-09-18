@@ -1373,16 +1373,17 @@ hildon_vkb_renderer_input_slide(HildonVKBRenderer *self, gboolean unk)
 
   priv = self->priv;
   sliding_key = priv->sliding_key;
+
   if ( sliding_key )
   {
     if ( unk )
     {
       if ( sliding_key->current_slide_key )
-        label = &sliding_key->label[sizeof(gchar *) * (sliding_key->current_slide_key - 1)];
+        label = ((char**)sliding_key->label)[sliding_key->current_slide_key - 1];
       else
-        label = &sliding_key->label[sizeof(gchar *) * (sliding_key->byte_count - 1)];
+        label = ((char**)sliding_key->label)[sliding_key->byte_count - 1];
 
-      sliding_key->unk3 = 0;
+      sliding_key->width = 0;
       priv->sliding_key->current_slide_key = 0;
 
       gtk_widget_queue_draw_area(GTK_WIDGET(self),
@@ -1402,7 +1403,7 @@ hildon_vkb_renderer_input_slide(HildonVKBRenderer *self, gboolean unk)
     }
     else
     {
-      label = &sliding_key->label[sizeof(gchar *) * sliding_key->current_slide_key];
+      label = ((char**)sliding_key->label)[sliding_key->current_slide_key];
       if ( priv->dead_key )
       {
 has_dead_key:
@@ -1410,7 +1411,7 @@ has_dead_key:
         return;
       }
     }
-    g_signal_emit(self, signals[0], 0, label, unk);
+    g_signal_emit(self, signals[INPUT], 0, label, unk);
   }
 }
 
@@ -1477,7 +1478,7 @@ LABEL_14:
       goto LABEL_15;
     }
 
-    if(priv->sliding_key_timeout > 0 && pressed_key->key_type & KEY_TYPE_SLIDING )
+    if(priv->sliding_key_timeout && (pressed_key->key_type & KEY_TYPE_SLIDING) )
     {
       priv->sliding_key = pressed_key;
       hildon_vkb_renderer_input_slide(self, 0);
@@ -1486,7 +1487,8 @@ LABEL_14:
         priv->pressed_key->current_slide_key = 0;
       else
         priv->pressed_key->current_slide_key++;
-      priv->pressed_key->unk3 = 0;
+
+      priv->pressed_key->width = 0;
       priv->sliding_key_timer = g_timeout_add(
                                   priv->sliding_key_timeout,
                                   hildon_vkb_renderer_sliding_key_timeout,
@@ -1713,22 +1715,13 @@ hildon_vkb_renderer_expose(GtkWidget *widget, GdkEventExpose *event)
   vkb_key_section *key_section;
   vkb_key *key;
   GtkStyle *style;
-  int v13;
-  unsigned char byte_count;
-  signed int v16;
-  int v17;
-  int v18;
-  PangoLayoutIter *v19;
-  vkb_key *v20;
+  PangoLayoutIter *iter;
   unsigned int j;
   cairo_t *ct;
   gchar *text;
   gchar *tmp_text;
-  signed int v27;
-  signed int v28;
   GdkRectangle src;
   GdkRectangle dest;
-  int v31;
   int height;
   int i;
   int n_rectangles;
@@ -1815,96 +1808,92 @@ LABEL_42:
       src.height = key->bottom - key->top;
       if ( !gdk_rectangle_intersect(&event->area, &src, &dest) )
         goto LABEL_28;
-      if ( key->key_flags & 0x20 )
+      if ( key->key_flags & KEY_TYPE_DEAD )
         style = priv->special.gtk_style;
       else
         style = priv->normal.gtk_style;
       gdk_cairo_set_source_color(ct, &style->fg[key->gtk_state]);
-      v13 = key->key_type;
-      if ( v13 & 1 )
+
+      if(key->key_type & KEY_TYPE_SLIDING)
       {
-        byte_count = key->byte_count;
-        if ( byte_count > 2u )
+        char ** label=(char**)key->label;
+        unsigned char byte_count = key->byte_count;
+
+        if ( byte_count > 2 )
         {
-          if ( key->current_slide_key && key->current_slide_key > 1)
+          int next = 2,
+              current = 1,
+              prev = 0;
+
+          if (key->current_slide_key)
           {
-            v28 = key->current_slide_key + 1;
-            v16 = byte_count;
-            v27 = key->current_slide_key;
-            v17 = 4 * (key->current_slide_key - 1) % byte_count;
-            goto LABEL_23;
+            next = key->current_slide_key + 1;
+            current = key->current_slide_key;
+            prev = key->current_slide_key - 1;
           }
-          else
+          else if ( priv->sliding_key_timer )
           {
-            if ( priv->sliding_key_timer )
-            {
-              v16 = byte_count;
-              v28 = byte_count + 1;
-              v27 = byte_count;
-              v17 = 4 * (byte_count - 1) % byte_count;
-LABEL_23:
-              tmp_text = g_strconcat(
-                           &key->label[v17],
-                           " ",
-                           &key->label[4 * v27 % v16],
-                           " ",
-                           &key->label[4 * v28 % v16],
-                           NULL);
-              text = tmp_text;
-              goto LABEL_24;
-            }
+            next = byte_count + 1;
+            current = byte_count;
+            prev = byte_count - 1;
           }
-          v16 = byte_count;
-          v28 = 2;
-          v27 = 1;
-          v17 = 0;
-          goto LABEL_23;
-        }
-        text = &key->label[4 * key->current_slide_key];
-        tmp_text = 0;
-      }
-      else
-      {
-        if ( v13 & 4 && (v20 = key->sub_keys) != 0 && key->num_sub_keys > 1u )
-        {
-          if ( priv->secondary_layout )
-          {
-            text = v20[1].label;
-            tmp_text = 0;
-          }
-          else
-          {
-            text = v20->label;
-            tmp_text = 0;
-          }
+
+          tmp_text = g_strconcat(
+                       label[prev % byte_count],
+                       " ",
+                       label[current % byte_count],
+                       " ",
+                       label[next % byte_count],
+                       NULL);
+
+          text = tmp_text;
         }
         else
         {
-          text = key->label;
+          text = label[key->current_slide_key];
+          tmp_text = NULL;
+        }
+      }
+      else if ((key->key_type & KEY_TYPE_MULTIPLE) && key->sub_keys && key->num_sub_keys > 1)
+      {
+        if ( priv->secondary_layout )
+        {
+          text = key->sub_keys[1].label;
+          tmp_text = 0;
+        }
+        else
+        {
+          text = key->sub_keys->label;
           tmp_text = 0;
         }
       }
-LABEL_24:
-      v18 = strlen(text);
-      pango_layout_set_text(priv->pango_layout, text, v18);
-      pango_layout_get_pixel_size(priv->pango_layout, (int *)&v31, 0);
-      key->unk3 = v31;
-      v19 = pango_layout_get_iter(priv->pango_layout);
-      key->offset = height / 2 + (signed int)(key->bottom - key->top) / 2;
-      pango_layout_iter_free(v19);
-      if ( key->key_type & KEY_TYPE_SLIDING && key->byte_count > 2u )
+      else
       {
-        cairo_move_to(
-          ct,
-          (long double)(key->left + ((key->right - key->left - key->unk3))),
-          (long double)(key->top + (signed int)(key->bottom - key->top - key->offset) / 2));
+        text = key->label;
+        tmp_text = 0;
+      }
+
+      pango_layout_set_text(priv->pango_layout, text, strlen(text));
+      pango_layout_get_pixel_size(priv->pango_layout, (int*)&key->width, 0);
+
+      iter = pango_layout_get_iter(priv->pango_layout);
+      key->offset = height / 2 + (signed int)(key->bottom - key->top) / 2;
+      pango_layout_iter_free(iter);
+
+      if ( (key->key_type & KEY_TYPE_SLIDING) && key->byte_count > 2 )
+      {
+        cairo_move_to(ct,
+                      key->left + (key->right - key->left - key->width)/2,
+                      key->top + (key->bottom - key->top - key->offset)/2);
+
         cairo_save(ct);
         gdk_cairo_set_source_color(ct, &priv->slide.gtk_style->fg[4]);
         pango_cairo_show_layout(ct, priv->pango_layout);
         cairo_restore(ct);
+
         if ( priv->sliding_key_timer )
         {
-          pango_layout_set_text(priv->pango_layout, text, g_utf8_skip[(int)(*text)]);
+          pango_layout_set_text(priv->pango_layout, text, g_utf8_next_char(text)-text);
           pango_cairo_show_layout(ct, priv->pango_layout);
         }
       }
@@ -1912,10 +1901,11 @@ LABEL_24:
       {
         cairo_move_to(
           ct,
-          (key->left + ((key->right - key->left - key->unk3) >> 1)),
-          (key->top + (key->bottom - key->top - key->offset) / 2));
+          (key->left + ((key->right - key->left - key->width)/2)),
+          (key->top + (key->bottom - key->top - key->offset)/2));
         pango_cairo_show_layout(ct, priv->pango_layout);
       }
+
       g_free(tmp_text);
 LABEL_28:
       j++;
@@ -1986,15 +1976,15 @@ LABEL_12:
             if ( key->gtk_state == 4 )
             {
               g_signal_emit(widget, signals[ILLEGAL_INPUT], 0,
-                            key->key_type & KEY_TYPE_SLIDING?*key->label:key->label,
+                            key->key_type & KEY_TYPE_SLIDING?*(char**)key->label:key->label,
                             0);
               return TRUE;
             }
+
             priv->pressed_key = key;
+
             if ( !(key->key_type & KEY_TYPE_SLIDING) && !(key->key_flags & KEY_TYPE_SHIFT) )
-            {
               g_signal_emit(HILDON_VKB_RENDERER(widget), signals[TEMP_INPUT], 0, key->label, 1);
-            }
 
             if ( priv->sliding_key )
             {
@@ -2006,9 +1996,8 @@ LABEL_12:
               }
             }
             else
-            {
               tmp_key = priv->pressed_key;
-            }
+
             if ( !is_shift_or_dead_key(tmp_key) )
             {
               hildon_vkb_renderer_key_update(HILDON_VKB_RENDERER(widget), tmp_key, 1, 1);
