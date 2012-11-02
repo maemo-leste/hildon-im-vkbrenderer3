@@ -23,6 +23,8 @@
 
 #include "imlayout_vkb.h"
 
+#define DEFAULT_LAYOUTTYPE 4 // THUMB_LAYOUT
+
 enum {
   INPUT = 0,
   ILLEGAL_INPUT,
@@ -320,6 +322,18 @@ hildon_vkb_renderer_update_pixmap(HildonVKBRenderer *self)
 }
 
 static gboolean
+hildon_vkb_renderer_collection_has_layout_type(vkb_layout_collection* layout_collection, int layout_type)
+{
+  int layout_type_count;
+  for(layout_type_count = 0;layout_type_count<layout_collection->num_layouts;++layout_type_count)
+  {
+    if(layout_collection->layout_types[layout_type_count] == layout_type)
+      return TRUE;
+  }
+  return FALSE;
+}
+
+static gboolean
 hildon_vkb_renderer_load_layout(HildonVKBRenderer *self, int layout)
 {
   HildonVKBRendererPrivate *priv;
@@ -332,8 +346,10 @@ hildon_vkb_renderer_load_layout(HildonVKBRenderer *self, int layout)
   {
     if ( !priv->layout )
     {
+      if(!hildon_vkb_renderer_collection_has_layout_type(priv->layout_collection, priv->layout_type))
+	priv->layout_type = DEFAULT_LAYOUTTYPE;
       priv->layout = imlayout_vkb_get_layout(priv->layout_collection, priv->layout_type);
-      priv = self->priv;
+
       if ( !priv->layout )
       {
         g_warning("Set layout type does not exist in current collection, will load default layout in current collection\n");
