@@ -2,7 +2,7 @@ hildon-im-vkbrenderer3 (3.3.22-1+0m5) unstable; urgency=low
 
   * Start using new libimlayouts0-dev package
 
- -- Ivaylo Dimmitrov <freemangordon@abv.bg>  Fri, 27 Oct 2017 22:02:29 -0400
+ -- Jonathan Wilson <jfwfreo@tpgi.com.au>  Fri, 27 Oct 2017 22:02:29 -0400
 
 hildon-im-vkbrenderer3 (3.3.21-1+0m5) unstable; urgency=low
 
