@@ -1,4 +1,4 @@
-AC_INIT([hildon-im-vkbrenderer3], [3.3.20])
+AC_INIT([hildon-im-vkbrenderer3], [3.3.22])
 
 libhildon_im_vkbrenderer_lt_current=3
 libhildon_im_vkbrenderer_lt_rev=3
@@ -18,7 +18,7 @@ AM_PROG_CC_STDC
 AC_PROG_LIBTOOL
 AC_HEADER_STDC
 
-PKG_CHECK_MODULES(DEPS, gtk+-2.0 >= 2.4.0 gconf-2.0 > 2.0 glib-2.0 >= 2.20.3 x11)
+PKG_CHECK_MODULES(DEPS, gtk+-2.0 >= 2.4.0 gconf-2.0 > 2.0 glib-2.0 >= 2.20.3 x11 imlayouts)
 AC_SUBST(DEPS_CFLAGS)
 AC_SUBST(DEPS_LIBS)
 

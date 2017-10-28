@@ -21,7 +21,7 @@
 #include "hildon-vkb-renderer-marshal.h"
 #include "hildon-im-vkbrenderer.h"
 
-#include "imlayout_vkb.h"
+#include "imlayouts.h"
 
 enum {
   INPUT = 0,
