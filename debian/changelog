@@ -1,3 +1,9 @@
+hildon-im-vkbrenderer3 (3.3.22-1+0m6) unstable; urgency=low
+
+  * Clean up hildon-im-vkbrenderer3 a little bit
+
+ -- Jonathan Wilson <jfwfreo@tpgi.com.au>  Sun, 29 Oct 2017 03:30:01 -0400
+
 hildon-im-vkbrenderer3 (3.3.22-1+0m5) unstable; urgency=low
 
   * Start using new libimlayouts0-dev package

@@ -16,12 +16,10 @@
 #include <gdk/gdkx.h>
 #include <gtk/gtkwidget.h>
 #include <gtk/gtkbutton.h>
-
+#include <imlayouts.h>
 
 #include "hildon-vkb-renderer-marshal.h"
 #include "hildon-im-vkbrenderer.h"
-
-#include "imlayouts.h"
 
 enum {
   INPUT = 0,
@@ -78,21 +76,21 @@ struct _HildonVKBRendererPrivate{
   int mode_bitmask;
   guint layout_type;
   guint num_sub_layouts;
-  int field_20;
+  gboolean field_20;
   gboolean secondary_layout;
-  int field_28;
+  gboolean field_28;
   PangoLayout* pango_layout;
   GdkPixmap *pixmap;
   GtkRequisition requisition;
-  int field_3C;
+  gboolean field_3C;
   vkb_key* pressed_key;
   vkb_key* dead_key;
   gdouble x;
   gdouble y;
-  int field_58;
-  int field_5C;
-  int field_60;
-  int field_64;
+  gboolean field_58;
+  gboolean field_5C;
+  gboolean field_60;
+  gboolean field_64;
   int gesture_range;
   vkb_key* sliding_key;
   guint sliding_key_timer;
@@ -520,17 +518,17 @@ hildon_vkb_renderer_init (HildonVKBRenderer *self)
   priv->current_sub_layout = 0;
   priv->mode_bitmask = 0;
   priv->layout_type = 0;
-  priv->field_20 = 0;
-  priv->field_28 = 0;
+  priv->field_20 = FALSE;
+  priv->field_28 = FALSE;
   priv->pixmap = 0;
-  priv->field_3C = 0;
+  priv->field_3C = FALSE;
   priv->pressed_key = NULL;
   priv->x = 0;
   priv->y = 0;
-  priv->field_58 = 1;
-  priv->field_5C = 0;
-  priv->field_60 = 0;
-  priv->field_64 = 1;
+  priv->field_58 = TRUE;
+  priv->field_5C = FALSE;
+  priv->field_60 = FALSE;
+  priv->field_64 = TRUE;
   priv->sliding_key_timer = 0;
   priv->normal.style  = NULL;
   priv->special.style = NULL;
@@ -541,8 +539,8 @@ hildon_vkb_renderer_init (HildonVKBRenderer *self)
   priv->shift.style = NULL;
   priv->key_repeat_init_timer = 0;
   priv->key_repeat_timer = 0;
-  priv->field_C0 = 0;
-  priv->shift_active = 0;
+  priv->field_C0 = FALSE;
+  priv->shift_active = FALSE;
 
   g_signal_connect_data(self, "style-set", G_CALLBACK(theme_changed), self, 0, 0);
 }
@@ -579,11 +577,11 @@ hildon_vkb_renderer_release_cleanup(HildonVKBRendererPrivate *priv)
   priv->pressed_key = NULL;
   priv->x = 0;
   priv->y = 0;
-  priv->field_58 = 1;
-  priv->field_5C = 0;
-  priv->field_60 = 0;
-  priv->field_64 = 1;
-  priv->field_20 = 0;
+  priv->field_58 = TRUE;
+  priv->field_5C = FALSE;
+  priv->field_60 = FALSE;
+  priv->field_64 = TRUE;
+  priv->field_20 = FALSE;
 }
 
 
@@ -858,7 +856,7 @@ tracef;
       if ( priv->sub_layout )
       {
         priv->current_sub_layout = priv->sub_layout;
-        priv->field_20 = 1;
+        priv->field_20 = TRUE;
       }
       priv->sub_layout = 0;
     break;
@@ -965,7 +963,7 @@ hildon_vkb_renderer_paint_pixmap(HildonVKBRenderer *self)
   {
     if ( priv->pixmap )
     {
-      priv->field_28 = 0;
+      priv->field_28 = FALSE;
       imlayout_vkb_init_buttons(self->priv->layout_collection,
                                 self->priv->layout,
                                 GTK_WIDGET(self)->allocation.width,
@@ -998,7 +996,7 @@ hildon_vkb_renderer_paint_pixmap(HildonVKBRenderer *self)
               {
                 key->gtk_state = 1;
                 self->priv->dead_key->gtk_state = 1;
-                self->priv->field_20 = 0;
+                self->priv->field_20 = FALSE;
               }
               hildon_vkb_renderer_key_update(self, key, -1, 0);
               i++;
@@ -1011,12 +1009,12 @@ hildon_vkb_renderer_paint_pixmap(HildonVKBRenderer *self)
         }
         while ( sub_layout->num_key_sections > section );
       }
-      priv->field_3C = 1;
+      priv->field_3C = TRUE;
     }
   }
   else
   {
-    priv->field_28 = 1;
+    priv->field_28 = TRUE;
   }
 }
 
@@ -1429,17 +1427,17 @@ hildon_vkb_renderer_button_release(GtkWidget *widget, GdkEventButton *event)
 {
   vkb_key *pressed_key;
   int gesture_range;
-  int v7;
-  vkb_key *v8;
+  int timer;
+  vkb_key *dead_key;
 
   unsigned short key_flags;
-  int v10;
+  int shift;
 
   tracef;
 
   HildonVKBRenderer *self;
   HildonVKBRendererPrivate *priv;
-  gboolean v38;
+  gboolean b;
 
   g_return_val_if_fail(HILDON_IS_VKB_RENDERER(widget),TRUE);
 
@@ -1449,7 +1447,7 @@ hildon_vkb_renderer_button_release(GtkWidget *widget, GdkEventButton *event)
 
   if ( event->button != 1 || !priv->pressed_key || !priv->sub_layout )
     goto out;
-  priv->field_C0 = 0;
+  priv->field_C0 = FALSE;
   pressed_key = priv->pressed_key;
   gesture_range = priv->gesture_range;
   if(event->x <= ((int)pressed_key->left - gesture_range) ||
@@ -1457,16 +1455,16 @@ hildon_vkb_renderer_button_release(GtkWidget *widget, GdkEventButton *event)
      event->y <= ((int)pressed_key->top - gesture_range) ||
      event->y > (pressed_key->bottom + gesture_range))
   {
-    v38 = 0;
+    b = 0;
   }
   else
   {
-    v7 = priv->key_repeat_timer;
-    if ( v7 )
+    timer = priv->key_repeat_timer;
+    if ( timer )
     {
-      v38 = 0;
+      b = 0;
 LABEL_14:
-      g_source_remove(v7);
+      g_source_remove(timer);
       priv->key_repeat_timer = 0;
       pressed_key = priv->pressed_key;
       goto LABEL_15;
@@ -1474,7 +1472,7 @@ LABEL_14:
 
     if ( is_shift_or_dead_key(pressed_key) )
     {
-      v38 = 1;
+      b = 1;
       goto LABEL_15;
     }
 
@@ -1493,30 +1491,30 @@ LABEL_14:
                                   priv->sliding_key_timeout,
                                   hildon_vkb_renderer_sliding_key_timeout,
                                   widget);
-      v38 = 1;
+      b = 1;
     }
     else
     {
       hildon_vkb_renderer_input_key(self);
-      v38 = 1;
+      b = 1;
     }
   }
-  v7 = priv->key_repeat_timer;
-  if ( v7 )
+  timer = priv->key_repeat_timer;
+  if ( timer )
     goto LABEL_14;
   pressed_key = priv->pressed_key;
 LABEL_15:
   if ( pressed_key )
   {
-    v8 = (vkb_key *)priv->dead_key;
-    if ( v8 && v8 != pressed_key )
+    dead_key = priv->dead_key;
+    if ( dead_key && dead_key != pressed_key )
     {
       key_flags = pressed_key->key_flags;
-      v10 = pressed_key->key_flags & KEY_TYPE_SHIFT;
+      shift = pressed_key->key_flags & KEY_TYPE_SHIFT;
       if ( pressed_key->key_flags & KEY_TYPE_SHIFT )
       {
 LABEL_22:
-        if ( v10 == KEY_TYPE_SHIFT && v38 )
+        if ( shift == KEY_TYPE_SHIFT && b )
         {
           hildon_vkb_renderer_key_update(self,
                                          pressed_key,
@@ -1526,9 +1524,9 @@ LABEL_22:
         }
         else
         {
-          if ( key_flags & KEY_TYPE_DEAD && v38 )
+          if ( key_flags & KEY_TYPE_DEAD && b )
           {
-            if ( (vkb_key *)priv->dead_key == pressed_key )
+            if ( priv->dead_key == pressed_key )
             {
               hildon_vkb_renderer_key_update(self, pressed_key, 0, 1);
               if ( priv->dead_key )
@@ -1559,13 +1557,13 @@ LABEL_22:
       }
       if ( !priv->field_20 )
       {
-        hildon_vkb_renderer_key_update(self, v8, 0, 1);
+        hildon_vkb_renderer_key_update(self, dead_key, 0, 1);
         pressed_key = priv->pressed_key;
       }
       priv->dead_key = 0;
     }
     key_flags = pressed_key->key_flags;
-    v10 = pressed_key->key_flags & KEY_TYPE_SHIFT;
+    shift = pressed_key->key_flags & KEY_TYPE_SHIFT;
     goto LABEL_22;
   }
 
@@ -1674,7 +1672,7 @@ tracef;
     {
       g_source_remove(priv->key_repeat_timer);
       priv->key_repeat_timer = 0;
-      priv->field_58 = 0;
+      priv->field_58 = FALSE;
     }
     priv->sliding_key = 0;
 
@@ -1689,10 +1687,10 @@ tracef;
     {
       if ( !priv->field_C0 )
       {
-        priv->field_C0 = 1;
+        priv->field_C0 = TRUE;
         hildon_vkb_renderer_input_key(HILDON_VKB_RENDERER(widget));
       }
-      priv->field_58 = 0;
+      priv->field_58 = FALSE;
     }
   }
 
@@ -2029,7 +2027,7 @@ LABEL_38:
               if ( !tmp_key->key_type )
                 goto LABEL_35;
             }
-            priv->field_58 = 0;
+            priv->field_58 = FALSE;
             goto LABEL_19;
           }
 LABEL_14:
@@ -2426,7 +2424,7 @@ hildon_vkb_renderer_clear_dead_key(HildonVKBRenderer *renderer)
   if(priv->dead_key)
   {
     if(priv->field_20)
-      priv->field_20 = 0;
+      priv->field_20 = FALSE;
     else
       hildon_vkb_renderer_key_update(renderer, priv->dead_key, 0, 1);
     priv->dead_key = 0;
