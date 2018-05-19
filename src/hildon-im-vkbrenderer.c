@@ -246,7 +246,9 @@ hildon_vkb_renderer_update_mode(HildonVKBRenderer *self, gboolean update_key)
           while ( 1 )
           {
             vkb_key *sub_key = &key->sub_keys[j];
-            if ( sub_key->key_flags & self->priv->mode_bitmask && sub_key->label && *sub_key->label )
+
+            if (sub_key->key_flags & self->priv->mode_bitmask &&
+                sub_key->labels && *sub_key->labels)
             {
               key->gtk_state = 0;
               ++j;
@@ -277,7 +279,8 @@ hildon_vkb_renderer_update_mode(HildonVKBRenderer *self, gboolean update_key)
       {
         unsigned char old_gtk_state = key->gtk_state;
 
-        if ((key->key_flags & self->priv->mode_bitmask && (key->label && (key->key_type == 1 || *key->label))) ||
+        if ((key->key_flags & self->priv->mode_bitmask &&
+             (key->labels && (key->key_type == KEY_TYPE_SLIDING || *key->labels))) ||
             (key->key_flags & self->priv->mode_bitmask & (KEY_TYPE_TAB|KEY_TYPE_WHITESPACE)) ||
             (key->key_flags & KEY_TYPE_SHIFT))
           key->gtk_state = 0;
@@ -588,16 +591,18 @@ hildon_vkb_renderer_release_cleanup(HildonVKBRendererPrivate *priv)
 void
 layout_info_free(HildonVKBRendererLayoutInfo *layout_info)
 {
-  if ( layout_info )
+  if (layout_info)
   {
-    if ( layout_info->label )
+    if (layout_info->label)
     {
       int i;
-      for(i=0;i<layout_info->num_layouts;i++)
+
+      for (i = 0; i < layout_info->num_layouts; i++)
         g_free(layout_info->label[i]);
 
       g_free(layout_info->label);
     }
+
     g_free(layout_info->type);
     g_free(layout_info);
   }
@@ -987,9 +992,12 @@ hildon_vkb_renderer_paint_pixmap(HildonVKBRenderer *self)
             do
             {
               vkb_key *key = &key_section->keys[i];
-              if(!self->priv->dead_key || g_strcmp0(self->priv->dead_key->label, key->label))
+
+              if(!self->priv->dead_key ||
+                 g_strcmp0((gchar *)self->priv->dead_key->labels,
+                           (gchar *)key->labels))
               {
-                if((key->key_flags & 0x1080) == 0x1080)
+                if((key->key_flags & KEY_TYPE_SHIFT) == KEY_TYPE_SHIFT)
                   key->gtk_state = self->priv->shift_active != 0;
               }
               else
@@ -1215,7 +1223,7 @@ hildon_vkb_renderer_accent_combine_input(HildonVKBRenderer *self, const char *co
     key = self->priv->dead_key;
     if ( key )
     {
-      uc_label = g_utf8_get_char(key->label);
+      uc_label = g_utf8_get_char((gchar *)key->labels);
       if ( uc_label == 0xB8 )
       {
         str[1] = 0x327u;
@@ -1364,7 +1372,7 @@ hildon_vkb_renderer_input_slide(HildonVKBRenderer *self, gboolean unk)
 {
   vkb_key *sliding_key;
   HildonVKBRendererPrivate *priv;
-  char *label;
+  gchar *label;
   tracef;
 
   g_return_if_fail(HILDON_IS_VKB_RENDERER(self));
@@ -1372,14 +1380,14 @@ hildon_vkb_renderer_input_slide(HildonVKBRenderer *self, gboolean unk)
   priv = self->priv;
   sliding_key = priv->sliding_key;
 
-  if ( sliding_key )
+  if (sliding_key)
   {
-    if ( unk )
+    if (unk)
     {
-      if ( sliding_key->current_slide_key )
-        label = ((char**)sliding_key->label)[sliding_key->current_slide_key - 1];
+      if (sliding_key->current_slide_key)
+        label = sliding_key->labels[sliding_key->current_slide_key - 1];
       else
-        label = ((char**)sliding_key->label)[sliding_key->byte_count - 1];
+        label = sliding_key->labels[sliding_key->byte_count - 1];
 
       sliding_key->width = 0;
       priv->sliding_key->current_slide_key = 0;
@@ -1401,8 +1409,9 @@ hildon_vkb_renderer_input_slide(HildonVKBRenderer *self, gboolean unk)
     }
     else
     {
-      label = ((char**)sliding_key->label)[sliding_key->current_slide_key];
-      if ( priv->dead_key )
+      label = sliding_key->labels[sliding_key->current_slide_key];
+
+      if (priv->dead_key)
       {
 has_dead_key:
         hildon_vkb_renderer_accent_combine_input(self, label, unk);
@@ -1541,7 +1550,8 @@ LABEL_22:
               hildon_vkb_renderer_key_update(self, pressed_key, 1, 1);
 
               priv->dead_key = priv->pressed_key;
-              g_signal_emit(self, signals[COMBINING_INPUT], 0, priv->pressed_key->label, 0);
+              g_signal_emit(self, signals[COMBINING_INPUT], 0,
+                            priv->pressed_key->labels, 0);
             }
           }
           else
@@ -1625,7 +1635,8 @@ LABEL_21:
             priv->pressed_key = key;
             hildon_vkb_renderer_key_update(HILDON_VKB_RENDERER(self), key, 1, 1);
             if ( !(priv->pressed_key->key_type & 1) )
-              g_signal_emit(HILDON_VKB_RENDERER(self), signals[TEMP_INPUT], 0, priv->pressed_key->label, 1);
+              g_signal_emit(HILDON_VKB_RENDERER(self), signals[TEMP_INPUT], 0,
+                            priv->pressed_key->labels, 1);
           }
         }
       }
@@ -1814,7 +1825,7 @@ LABEL_42:
 
       if(key->key_type & KEY_TYPE_SLIDING)
       {
-        char ** label=(char**)key->label;
+        gchar **labels = key->labels;
         unsigned char byte_count = key->byte_count;
 
         if ( byte_count > 2 )
@@ -1837,18 +1848,18 @@ LABEL_42:
           }
 
           tmp_text = g_strconcat(
-                       label[prev % byte_count],
+                       labels[prev % byte_count],
                        " ",
-                       label[current % byte_count],
+                       labels[current % byte_count],
                        " ",
-                       label[next % byte_count],
+                       labels[next % byte_count],
                        NULL);
 
           text = tmp_text;
         }
         else
         {
-          text = label[key->current_slide_key];
+          text = labels[key->current_slide_key];
           tmp_text = NULL;
         }
       }
@@ -1856,18 +1867,18 @@ LABEL_42:
       {
         if ( priv->secondary_layout )
         {
-          text = key->sub_keys[1].label;
+          text = (gchar *)key->sub_keys[1].labels;
           tmp_text = 0;
         }
         else
         {
-          text = key->sub_keys->label;
+          text = (gchar *)key->sub_keys->labels;
           tmp_text = 0;
         }
       }
       else
       {
-        text = key->label;
+        text = (gchar *)key->labels;
         tmp_text = 0;
       }
 
@@ -1974,7 +1985,8 @@ LABEL_12:
             if ( key->gtk_state == 4 )
             {
               g_signal_emit(widget, signals[ILLEGAL_INPUT], 0,
-                            key->key_type & KEY_TYPE_SLIDING?*(char**)key->label:key->label,
+                            key->key_type & KEY_TYPE_SLIDING ?
+                              key->labels[0] : (gchar *)key->labels,
                             0);
               return TRUE;
             }
@@ -1982,7 +1994,8 @@ LABEL_12:
             priv->pressed_key = key;
 
             if ( !(key->key_type & KEY_TYPE_SLIDING) && !(key->key_flags & KEY_TYPE_SHIFT) )
-              g_signal_emit(HILDON_VKB_RENDERER(widget), signals[TEMP_INPUT], 0, key->label, 1);
+              g_signal_emit(HILDON_VKB_RENDERER(widget), signals[TEMP_INPUT], 0,
+                            key->labels, 1);
 
             if ( priv->sliding_key )
             {
@@ -2440,7 +2453,7 @@ hildon_vkb_renderer_get_dead_key(HildonVKBRenderer *renderer)
   g_return_val_if_fail(HILDON_IS_VKB_RENDERER(renderer),NULL);
 
   if(renderer->priv->dead_key)
-    return g_strdup(renderer->priv->dead_key->label);
+    return g_strdup((gchar *)renderer->priv->dead_key->labels);
 
   return NULL;
 }
@@ -2457,9 +2470,9 @@ hildon_vkb_renderer_input_key(HildonVKBRenderer *self)
   if ( key )
   {
     if(priv->dead_key)
-      hildon_vkb_renderer_accent_combine_input(self, key->label, 1);
+      hildon_vkb_renderer_accent_combine_input(self, (gchar *)key->labels, 1);
     else
-      g_signal_emit(self, signals[INPUT], 0, key->label, 1);
+      g_signal_emit(self, signals[INPUT], 0, key->labels, 1);
   }
 }
 

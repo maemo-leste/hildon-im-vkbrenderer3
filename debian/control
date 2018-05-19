@@ -3,7 +3,7 @@ Section: x11
 Priority: optional
 Maintainer: Ivaylo Dimmitrov <freemangordon@abv.bg>
 Build-Depends: debhelper (>= 5), autotools-dev, autoconf, automake,
-  libgtk2.0-dev, libglib2.0-dev, libx11-dev, libimlayouts0-dev, libgconf2-dev
+  libgtk2.0-dev, libglib2.0-dev, libx11-dev, libimlayouts0-dev (>= 1.5.16)
 Standards-Version: 3.7.2
 
 Package: libhildon-im-vkbrenderer3
@@ -17,11 +17,11 @@ Description: Virtual Keyboard Widget for the Hildon Input Method
 Package: libhildon-im-vkbrenderer3-dbg
 Section: devel
 Architecture: any
-Depends: libhildon-im-vkbrenderer3 (= ${Source-Version})
+Depends: libhildon-im-vkbrenderer3 (= ${binary:Version})
 Description: Debugging symbols for Virtual Keyboard Widget for the Hildon Input Method
 
 Package: hildon-im-vkbrenderer3-dev
 Section: devel
 Architecture: any
-Depends: libhildon-im-vkbrenderer3 (= ${Source-Version})
+Depends: libhildon-im-vkbrenderer3 (= ${binary:Version})
 Description: Development package for Virtual Keyboard Widget for the Hildon Input Method
