@@ -77,4 +77,8 @@ binary-arch: build install
 	dh_builddeb
 
 binary: binary-arch
+
+build-arch: build
+
+
 .PHONY: build clean binary-arch binary install configure
