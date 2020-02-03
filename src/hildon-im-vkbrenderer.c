@@ -120,7 +120,7 @@ struct _HildonVKBRendererLayoutInfo
 };
 
 #define HILDON_VKB_RENDERER_GET_PRIVATE(renderer) \
-  (hildon_vkb_renderer_get_instance_private(renderer))
+  ((HildonVKBRendererPrivate *)hildon_vkb_renderer_get_instance_private(renderer))
 
 G_DEFINE_DYNAMIC_TYPE_EXTENDED(
   HildonVKBRenderer, hildon_vkb_renderer, GTK_TYPE_WIDGET, 0,
@@ -166,7 +166,8 @@ hildon_vkb_renderer_clear(HildonVKBRenderer *self)
 
   g_return_if_fail (HILDON_IS_VKB_RENDERER (self));
 
-  priv = self->priv;
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
+
   if ( priv->sliding_key )
     hildon_vkb_renderer_input_slide(self, 1);
   if ( priv->sliding_key_timer )
@@ -179,14 +180,18 @@ hildon_vkb_renderer_clear(HildonVKBRenderer *self)
 static void
 hildon_vkb_renderer_update_mode(HildonVKBRenderer *self, gboolean update_key)
 {
-  tracef;
+  HildonVKBRendererPrivate *priv;
   vkb_sub_layout *sub_layout;
   vkb_key *key;
   gboolean needs_update=FALSE;
 
+  tracef;
+
   g_return_if_fail (HILDON_IS_VKB_RENDERER (self));
 
-  sub_layout = self->priv->sub_layout;
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
+
+  sub_layout = priv->sub_layout;
   if ( sub_layout && sub_layout->num_key_sections )
   {
     vkb_key_section *key_section;
@@ -213,7 +218,7 @@ hildon_vkb_renderer_update_mode(HildonVKBRenderer *self, gboolean update_key)
 
       if ((key->key_type & KEY_TYPE_HEXA) && key->sub_keys && key->num_sub_keys > 1)
       {
-        if ( self->priv->secondary_layout )
+        if ( priv->secondary_layout )
           gtk_state = key->sub_keys[1].gtk_state;
         else
           gtk_state = key->sub_keys->gtk_state;
@@ -225,7 +230,7 @@ hildon_vkb_renderer_update_mode(HildonVKBRenderer *self, gboolean update_key)
           {
             vkb_key *sub_key = &key->sub_keys[j];
 
-            if (sub_key->key_flags & self->priv->mode_bitmask &&
+            if (sub_key->key_flags & priv->mode_bitmask &&
                 sub_key->labels && *sub_key->labels)
             {
               key->gtk_state = 0;
@@ -242,7 +247,7 @@ hildon_vkb_renderer_update_mode(HildonVKBRenderer *self, gboolean update_key)
             }
           }
         }
-        if ( self->priv->secondary_layout )
+        if ( priv->secondary_layout )
         {
           if ( key->sub_keys[1].gtk_state == gtk_state )
             goto update;
@@ -257,9 +262,9 @@ hildon_vkb_renderer_update_mode(HildonVKBRenderer *self, gboolean update_key)
       {
         unsigned char old_gtk_state = key->gtk_state;
 
-        if ((key->key_flags & self->priv->mode_bitmask &&
+        if ((key->key_flags & priv->mode_bitmask &&
              (key->labels && (key->key_type == KEY_TYPE_SLIDING || *key->labels))) ||
-            (key->key_flags & self->priv->mode_bitmask & (KEY_TYPE_TAB|KEY_TYPE_WHITESPACE)) ||
+            (key->key_flags & priv->mode_bitmask & (KEY_TYPE_TAB|KEY_TYPE_WHITESPACE)) ||
             (key->key_flags & KEY_TYPE_SHIFT))
           key->gtk_state = 0;
         else
@@ -288,10 +293,15 @@ update:
 static void
 hildon_vkb_renderer_update_pixmap(HildonVKBRenderer *self)
 {
+  HildonVKBRendererPrivate *priv;
+
   tracef;
   g_return_if_fail (HILDON_IS_VKB_RENDERER (self));
-  imlayout_vkb_init_buttons(self->priv->layout_collection,
-                            self->priv->layout,
+
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
+
+  imlayout_vkb_init_buttons(priv->layout_collection,
+                            priv->layout,
                             GTK_WIDGET(self)->allocation.width,
                             GTK_WIDGET(self)->allocation.height);
   hildon_vkb_renderer_update_mode(self, 0);
@@ -306,22 +316,22 @@ hildon_vkb_renderer_load_layout(HildonVKBRenderer *self, int layout)
 
   g_return_val_if_fail (HILDON_IS_VKB_RENDERER (self),FALSE);
 
-  priv = self->priv;
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
+
   if ( priv->layout_collection )
   {
     if ( !priv->layout )
     {
       priv->layout = imlayout_vkb_get_layout(priv->layout_collection, priv->layout_type);
-      priv = self->priv;
+
       if ( !priv->layout )
       {
         g_warning("Set layout type does not exist in current collection, will load default layout in current collection\n");
 
-        self->priv->layout = imlayout_vkb_get_layout(
-                               self->priv->layout_collection,
-                               *self->priv->layout_collection->layout_types);
-        priv = self->priv;
-        priv->layout_type = priv->layout->type;
+        priv->layout = imlayout_vkb_get_layout(
+                               priv->layout_collection,
+                               *priv->layout_collection->layout_types);
+
         if ( !priv->layout )
           goto error;
       }
@@ -368,7 +378,8 @@ hildon_vkb_renderer_get_numeric_sub(HildonVKBRenderer *renderer)
   tracef;
 
   g_return_val_if_fail (HILDON_IS_VKB_RENDERER (renderer),-1);
-  priv = renderer->priv;
+
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(renderer);
 
   if(!priv->layout)
   {
@@ -388,7 +399,8 @@ hildon_vkb_renderer_set_variance_layout(HildonVKBRenderer *renderer)
   tracef;
 
   g_return_if_fail (HILDON_IS_VKB_RENDERER (renderer));
-  priv = renderer->priv;
+
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(renderer);
 
   if(!priv->sub_layout)
     hildon_vkb_renderer_load_layout(renderer, 1);
@@ -409,7 +421,7 @@ tracef;
 
   g_return_if_fail (HILDON_IS_VKB_RENDERER (self));
 
-  priv = self->priv;
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
 
   switch(prop_id)
   {
@@ -491,7 +503,7 @@ hildon_vkb_renderer_init (HildonVKBRenderer *self)
 
   g_return_if_fail (HILDON_IS_VKB_RENDERER (self));
 
-  self->priv = priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
   priv->layout_collection = NULL;
   priv->layout = NULL;
   priv->sub_layout = NULL;
@@ -531,7 +543,9 @@ hildon_vkb_renderer_get_shift_active(HildonVKBRenderer * renderer)
 {
   tracef;
   g_return_val_if_fail(HILDON_IS_VKB_RENDERER(renderer),FALSE);
-  return renderer->priv->shift_active;
+
+
+  return HILDON_VKB_RENDERER_GET_PRIVATE(renderer)->shift_active;
 }
 
 void
@@ -539,7 +553,7 @@ hildon_vkb_renderer_set_shift_active(HildonVKBRenderer *renderer, gboolean value
 {
   tracef;
   g_return_if_fail(HILDON_IS_VKB_RENDERER(renderer));
-  renderer->priv->shift_active = value;
+  HILDON_VKB_RENDERER_GET_PRIVATE(renderer)->shift_active = value;
 }
 
 guint
@@ -547,7 +561,7 @@ hildon_vkb_renderer_get_pressed_key_mode(HildonVKBRenderer * renderer)
 {
   tracef;
   g_return_val_if_fail(HILDON_IS_VKB_RENDERER(renderer),0);
-  return renderer->priv->pressed_key->key_flags;
+  return HILDON_VKB_RENDERER_GET_PRIVATE(renderer)->pressed_key->key_flags;
 }
 
 static void
@@ -734,13 +748,17 @@ void hildon_vkb_renderer_update_option(GObject * self)
   vkb_key_section * key_section;
   vkb_key *key;
   vkb_sub_layout * sub_layout;
+  HildonVKBRendererPrivate *priv;
+
   tracef;
 
   g_return_if_fail (HILDON_IS_VKB_RENDERER (self));
 
   renderer = HILDON_VKB_RENDERER(self);
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(renderer);
 
-  sub_layout = renderer->priv->sub_layout;
+  sub_layout = priv->sub_layout;
+
   if ( sub_layout && sub_layout->num_key_sections )
   {
     int section = 0;
@@ -783,8 +801,10 @@ hildon_vkb_renderer_set_property(GObject *object,
              GParamSpec *pspec)
 {
   HildonVKBRendererPrivate *priv;
+
+  tracef;
+
   g_return_if_fail(HILDON_IS_VKB_RENDERER (object));
-tracef;
 
   priv = HILDON_VKB_RENDERER_GET_PRIVATE (HILDON_VKB_RENDERER(object));
 
@@ -941,14 +961,15 @@ hildon_vkb_renderer_paint_pixmap(HildonVKBRenderer *self)
 
   g_return_if_fail(HILDON_IS_VKB_RENDERER(self));
 
-  priv = self->priv;
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
+
   if ( priv->sub_layout )
   {
     if ( priv->pixmap )
     {
       priv->field_28 = FALSE;
-      imlayout_vkb_init_buttons(self->priv->layout_collection,
-                                self->priv->layout,
+      imlayout_vkb_init_buttons(priv->layout_collection,
+                                priv->layout,
                                 GTK_WIDGET(self)->allocation.width,
                                 GTK_WIDGET(self)->allocation.height);
 
@@ -971,18 +992,18 @@ hildon_vkb_renderer_paint_pixmap(HildonVKBRenderer *self)
             {
               vkb_key *key = &key_section->keys[i];
 
-              if(!self->priv->dead_key ||
-                 g_strcmp0((gchar *)self->priv->dead_key->labels,
+              if(!priv->dead_key ||
+                 g_strcmp0((gchar *)priv->dead_key->labels,
                            (gchar *)key->labels))
               {
                 if((key->key_flags & KEY_TYPE_SHIFT) == KEY_TYPE_SHIFT)
-                  key->gtk_state = self->priv->shift_active != 0;
+                  key->gtk_state = priv->shift_active != 0;
               }
               else
               {
                 key->gtk_state = 1;
-                self->priv->dead_key->gtk_state = 1;
-                self->priv->field_20 = FALSE;
+                priv->dead_key->gtk_state = 1;
+                priv->field_20 = FALSE;
               }
               hildon_vkb_renderer_key_update(self, key, -1, 0);
               i++;
@@ -1038,7 +1059,7 @@ hildon_vkb_renderer_realize(GtkWidget *widget)
 
   g_return_if_fail(HILDON_IS_VKB_RENDERER(widget));
 
-  priv = HILDON_VKB_RENDERER(widget)->priv;
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(HILDON_VKB_RENDERER(widget));
 
   GTK_OBJECT(widget)->flags |= GDK_WINDOW_STATE_BELOW;
 
@@ -1094,7 +1115,7 @@ void hildon_vkb_renderer_unrealize(GtkWidget *widget)
 
   g_return_if_fail(HILDON_IS_VKB_RENDERER(widget));
 
-  priv = HILDON_VKB_RENDERER(widget)->priv;
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(HILDON_VKB_RENDERER(widget));
 
   gdk_x11_display_get_xdisplay(gdk_screen_get_display(gtk_widget_get_screen(widget)));
 
@@ -1128,7 +1149,7 @@ hildon_vkb_renderer_finalize(GObject *obj)
 
   g_return_if_fail(HILDON_IS_VKB_RENDERER(obj));
 
-  priv = HILDON_VKB_RENDERER(obj)->priv;
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(HILDON_VKB_RENDERER(obj));
   gdk_x11_display_get_xdisplay(gdk_screen_get_display(gtk_widget_get_screen(GTK_WIDGET(obj))));
 
   if ( priv->layout )
@@ -1188,6 +1209,7 @@ hildon_vkb_renderer_font_has_char(HildonVKBRenderer *self,gunichar uc)
 static void
 hildon_vkb_renderer_accent_combine_input(HildonVKBRenderer *self, const char *combine, gboolean unk)
 {
+  HildonVKBRendererPrivate *priv;
   vkb_key *key;
   gunichar uc_label;
   gchar *s_normal;
@@ -1197,8 +1219,9 @@ hildon_vkb_renderer_accent_combine_input(HildonVKBRenderer *self, const char *co
 
   g_return_if_fail(HILDON_IS_VKB_RENDERER(self));
 
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
 
-    key = self->priv->dead_key;
+    key = priv->dead_key;
     if ( key )
     {
       uc_label = g_utf8_get_char((gchar *)key->labels);
@@ -1355,7 +1378,7 @@ hildon_vkb_renderer_input_slide(HildonVKBRenderer *self, gboolean unk)
 
   g_return_if_fail(HILDON_IS_VKB_RENDERER(self));
 
-  priv = self->priv;
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
   sliding_key = priv->sliding_key;
 
   if (sliding_key)
@@ -1371,12 +1394,12 @@ hildon_vkb_renderer_input_slide(HildonVKBRenderer *self, gboolean unk)
       priv->sliding_key->current_slide_key = 0;
 
       gtk_widget_queue_draw_area(GTK_WIDGET(self),
-                                 self->priv->sliding_key->left,
-                                 self->priv->sliding_key->top,
-                                 self->priv->sliding_key->right - self->priv->sliding_key->left,
-                                 self->priv->sliding_key->bottom - self->priv->sliding_key->top);
+                                 priv->sliding_key->left,
+                                 priv->sliding_key->top,
+                                 priv->sliding_key->right - priv->sliding_key->left,
+                                 priv->sliding_key->bottom - priv->sliding_key->top);
 
-      self->priv->sliding_key = 0;
+      priv->sliding_key = 0;
       if ( priv->sliding_key_timer )
       {
         g_source_remove(priv->sliding_key_timer);
@@ -1430,7 +1453,7 @@ hildon_vkb_renderer_button_release(GtkWidget *widget, GdkEventButton *event)
 
   self = HILDON_VKB_RENDERER(widget);
 
-  priv = HILDON_VKB_RENDERER(widget)->priv;
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
 
   if ( event->button != 1 || !priv->pressed_key || !priv->sub_layout )
     goto out;
@@ -1570,20 +1593,20 @@ get_key_from_coordinates(HildonVKBRenderer *self,GdkEventMotion *event)
 
   g_return_if_fail(self);
 
-  priv=self->priv;
+  priv=HILDON_VKB_RENDERER_GET_PRIVATE(self);
 
-  if ( self->priv->sub_layout )
+  if ( priv->sub_layout )
   {
-    if ( self->priv->sub_layout->num_key_sections )
+    if ( priv->sub_layout->num_key_sections )
     {
       i = 0;
       while ( 1 )
       {
-        if ( self->priv->sub_layout->key_sections[i].num_keys )
+        if ( priv->sub_layout->key_sections[i].num_keys )
           break;
 LABEL_21:
         i++;
-        if ( self->priv->sub_layout->num_key_sections == i )
+        if ( priv->sub_layout->num_key_sections == i )
           goto out;
       }
 
@@ -1591,7 +1614,7 @@ LABEL_21:
 
       while ( 1 )
       {
-        key = &self->priv->sub_layout->key_sections[i].keys[j];
+        key = &priv->sub_layout->key_sections[i].keys[j];
 
         if ( event->x > key->left &&
              event->x <= key->right &&
@@ -1600,7 +1623,7 @@ LABEL_21:
           break;
         ++j;
 
-        if ( j == self->priv->sub_layout->key_sections[i].num_keys )
+        if ( j == priv->sub_layout->key_sections[i].num_keys )
           goto LABEL_21;
       }
       if ( key->gtk_state != 4 )
@@ -1643,7 +1666,7 @@ hildon_vkb_renderer_motion_notify(GtkWidget *widget, GdkEventMotion *event)
 tracef;
   g_return_val_if_fail(HILDON_IS_VKB_RENDERER(widget),1);
 
-  priv = HILDON_VKB_RENDERER(widget)->priv;
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(HILDON_VKB_RENDERER(widget));
 
   if ( !priv->pressed_key )
     return 0;
@@ -1720,7 +1743,7 @@ tracef;
 
   self = HILDON_VKB_RENDERER(widget);
 
-  priv = self->priv;
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
 
   if(!priv->sub_layout && !hildon_vkb_renderer_load_layout(self, 1))
     if ( !priv->sub_layout && priv->pixmap )
@@ -1918,7 +1941,7 @@ hildon_vkb_renderer_button_press(GtkWidget *widget, GdkEventButton *event)
 
   g_return_val_if_fail(HILDON_IS_VKB_RENDERER(widget),TRUE);
 
-  priv = HILDON_VKB_RENDERER(widget)->priv;
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(HILDON_VKB_RENDERER(widget));
 
   if ( event->button == 1 && priv->sub_layout )
   {
@@ -2304,15 +2327,18 @@ hildon_vkb_renderer_class_finalize(HildonVKBRendererClass *klass)
 static void
 hildon_vkb_renderer_key_update(HildonVKBRenderer *self, vkb_key *key, int shift_active, int repaint)
 {
+  HildonVKBRendererPrivate *priv;
   GtkStyle *style;
   vkb_key *tmp_key;
   tracef;
 
   g_return_if_fail(HILDON_IS_VKB_RENDERER(self));
 
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
+
   if((key->key_type & KEY_TYPE_HEXA) && (key->sub_keys) && (key->num_sub_keys > 1))
   {
-    if ( self->priv->secondary_layout )
+    if ( priv->secondary_layout )
       tmp_key = key->sub_keys + 1;
     else
       tmp_key = key->sub_keys;
@@ -2324,24 +2350,24 @@ hildon_vkb_renderer_key_update(HildonVKBRenderer *self, vkb_key *key, int shift_
     tmp_key->gtk_state = shift_active;
 
   if(key->key_type & KEY_TYPE_SLIDING)
-    style = self->priv->slide.gtk_style;
+    style = priv->slide.gtk_style;
   else if(key->key_flags & KEY_TYPE_WHITESPACE)
-    style = self->priv->whitespace.gtk_style;
+    style = priv->whitespace.gtk_style;
   else if((key->key_flags & KEY_TYPE_TAB) == KEY_TYPE_TAB)
-    style = self->priv->tab.gtk_style;
+    style = priv->tab.gtk_style;
   else if((key->key_flags & KEY_TYPE_BACKSPACE) == KEY_TYPE_BACKSPACE)
-    style = self->priv->backspace.gtk_style;
+    style = priv->backspace.gtk_style;
   else if((key->key_flags & KEY_TYPE_SHIFT) == KEY_TYPE_SHIFT)
-    style = self->priv->shift.gtk_style;
+    style = priv->shift.gtk_style;
   else if(key->key_flags & KEY_TYPE_DEAD)
-    style = self->priv->special.gtk_style;
+    style = priv->special.gtk_style;
   else
-    style = self->priv->normal.gtk_style;
+    style = priv->normal.gtk_style;
 
   if(GTK_IS_STYLE(style))
   {
     style->depth = gdk_drawable_get_depth(self->parent.window);
-    gtk_paint_box(style, self->priv->pixmap, tmp_key->gtk_state, 1, 0, GTK_WIDGET(self), 0,
+    gtk_paint_box(style, priv->pixmap, tmp_key->gtk_state, 1, 0, GTK_WIDGET(self), 0,
                   key->left, key->top, key->right - key->left, key->bottom - key->top);
 
     if ( repaint )
@@ -2359,7 +2385,7 @@ hildon_vkb_renderer_set_sublayout_type(HildonVKBRenderer *renderer, unsigned int
 
   g_return_if_fail(HILDON_IS_VKB_RENDERER(renderer));
 
-  priv = renderer->priv;
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(renderer);
 
   if(priv->layout)
   {
@@ -2409,7 +2435,7 @@ hildon_vkb_renderer_clear_dead_key(HildonVKBRenderer *renderer)
 
   g_return_if_fail(HILDON_IS_VKB_RENDERER(renderer));
 
-  priv = renderer->priv;
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(renderer);
 
   if(priv->dead_key)
   {
@@ -2425,12 +2451,16 @@ hildon_vkb_renderer_clear_dead_key(HildonVKBRenderer *renderer)
 gchar*
 hildon_vkb_renderer_get_dead_key(HildonVKBRenderer *renderer)
 {
+  HildonVKBRendererPrivate *priv;
+
   tracef;
 
   g_return_val_if_fail(HILDON_IS_VKB_RENDERER(renderer),NULL);
 
-  if(renderer->priv->dead_key)
-    return g_strdup((gchar *)renderer->priv->dead_key->labels);
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(renderer);
+
+  if(priv->dead_key)
+    return g_strdup((gchar *)priv->dead_key->labels);
 
   return NULL;
 }
@@ -2442,7 +2472,7 @@ hildon_vkb_renderer_input_key(HildonVKBRenderer *self)
   vkb_key *key;
   tracef;
 
-  priv = self->priv;
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
   key = priv->pressed_key;
   if ( key )
   {
@@ -2457,11 +2487,13 @@ gboolean
 hildon_vkb_renderer_key_repeat(void *data)
 {
   HildonVKBRenderer *renderer;
+  HildonVKBRendererPrivate *priv;
   tracef;
 
   g_return_val_if_fail(HILDON_IS_VKB_RENDERER(data),FALSE);
 
   renderer = HILDON_VKB_RENDERER(data);
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(renderer);
 
   if(gdk_window_is_viewable(GTK_WIDGET(renderer)->window) &&
      (gdk_window_get_state(GTK_WIDGET(renderer)->window) != GDK_WINDOW_STATE_BELOW))
@@ -2470,9 +2502,9 @@ hildon_vkb_renderer_key_repeat(void *data)
     return TRUE;
   }
 
-  hildon_vkb_renderer_key_update(renderer, renderer->priv->pressed_key, 0, 1);
-  hildon_vkb_renderer_release_cleanup(renderer->priv);
-  renderer->priv->key_repeat_timer = 0;
+  hildon_vkb_renderer_key_update(renderer, priv->pressed_key, 0, 1);
+  hildon_vkb_renderer_release_cleanup(priv);
+  priv->key_repeat_timer = 0;
 
   return FALSE;
 }
@@ -2485,7 +2517,7 @@ hildon_vkb_renderer_key_repeat_init(void *data)
 
   g_return_val_if_fail(HILDON_IS_VKB_RENDERER(data),FALSE);
 
-  priv = HILDON_VKB_RENDERER(data)->priv;
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(HILDON_VKB_RENDERER(data));
 
   if(priv->pressed_key)
   {

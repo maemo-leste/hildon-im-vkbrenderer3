@@ -39,7 +39,6 @@ typedef struct _HildonVKBRendererLayoutInfo HildonVKBRendererLayoutInfo;
 struct _HildonVKBRenderer
 {
   GtkWidget parent;
-  HildonVKBRendererPrivate * priv;
 };
 
 struct _HildonVKBRendererClass
