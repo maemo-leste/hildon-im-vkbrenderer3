@@ -67,7 +67,8 @@ typedef struct {
  GtkStyle* gtk_style;
 }HildonVKBRendererKeyStyle;
 
-struct _HildonVKBRendererPrivate{
+struct _HildonVKBRendererPrivate
+{
   vkb_layout_collection *layout_collection;
   vkb_layout *layout;
   vkb_sub_layout *sub_layout;
@@ -108,19 +109,23 @@ struct _HildonVKBRendererPrivate{
   PangoFontDescription *font_desc;
   gboolean field_C0;
   gboolean shift_active;
-} ;
+};
 
-typedef struct {
-  GtkWidgetClass parent;
-  void (*input) (HildonVKBRenderer*, gchar*, gboolean);
-  void (*illegal_input) (HildonVKBRenderer*, gchar*);
-} HildonVKBRendererClass;
+struct _HildonVKBRendererLayoutInfo
+{
+  guint num_layouts;
+  guint *type;
+  gchar **label;
+  guint num_rows;
+};
 
-static GtkWidgetClass *parent_widget_class = NULL;
+#define HILDON_VKB_RENDERER_GET_PRIVATE(renderer) \
+  (hildon_vkb_renderer_get_instance_private(renderer))
 
-GType hildon_vkb_renderer_get_type (void);
-static void hildon_vkb_renderer_class_init (HildonVKBRendererClass *klass);
-static void hildon_vkb_renderer_init (HildonVKBRenderer *self);
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+  HildonVKBRenderer, hildon_vkb_renderer, GTK_TYPE_WIDGET, 0,
+  G_ADD_PRIVATE_DYNAMIC(HildonVKBRenderer)
+);
 
 static void hildon_vkb_renderer_key_update(HildonVKBRenderer *self, vkb_key *key, int shift_active, int repaint);
 static void hildon_vkb_renderer_input_key(HildonVKBRenderer *self);
@@ -130,56 +135,29 @@ static void hildon_vkb_renderer_input_slide(HildonVKBRenderer *self, gboolean un
 static gboolean hildon_vkb_renderer_sliding_key_timeout(void *data);
 static gboolean hildon_vkb_renderer_key_repeat_init(void *data);
 
-static GType HildonVKBRenderer_type = 0;
-
 /**
  * Module functions
  *
  **/
-void dyn_vkb_renderer_exit()
+void
+dyn_vkb_renderer_exit()
 {
 }
 
-GtkWidget *dyn_vkb_renderer_create(const gchar *first_prop_name, va_list va_args)
+GtkWidget *
+dyn_vkb_renderer_create(const gchar *first_prop_name, va_list va_args)
 {
-  return GTK_WIDGET(g_object_new_valist(HILDON_VKB_RENDERER_TYPE, first_prop_name, va_args));
+  return (GtkWidget *)g_object_new_valist(HILDON_VKB_RENDERER_TYPE,
+                                          first_prop_name, va_args);
 }
 
-GType
-hildon_vkb_renderer_get_type (void)
+void
+dyn_vkb_renderer_init(GTypeModule *module)
 {
-  return HildonVKBRenderer_type;
-}
-
-void dyn_vkb_renderer_init(GTypeModule *module)
-{
-  static const GTypeInfo type_info = {
-    sizeof(HildonVKBRendererClass),
-
-    NULL, /* base_init */
-    NULL, /* base_finalize */
-
-    (GClassInitFunc) hildon_vkb_renderer_class_init,
-    NULL, /* class_finalize */
-    NULL, /* class_data */
-
-    sizeof(HildonVKBRenderer),
-    0, /* n_preallocs */
-    (GInstanceInitFunc) hildon_vkb_renderer_init,
-
-    NULL
-  };
-
-  HildonVKBRenderer_type = g_type_module_register_type(module,
-                                                       GTK_TYPE_WIDGET,
-                                                       "HildonVKBRendererType",
-                                                       &type_info,
-                                                       0);
-  //return HildonVKBRenderer_type;
+  hildon_vkb_renderer_register_type(module);
 }
 
 /* Implementation of plugin interface starts here */
-
 
 static void
 hildon_vkb_renderer_clear(HildonVKBRenderer *self)
@@ -1135,9 +1113,9 @@ void hildon_vkb_renderer_unrealize(GtkWidget *widget)
     priv->pango_layout = NULL;
   }
 
-  if (GTK_WIDGET_CLASS(parent_widget_class)->unrealize)
+  if (GTK_WIDGET_CLASS(hildon_vkb_renderer_parent_class)->unrealize)
   {
-    GTK_WIDGET_CLASS(parent_widget_class)->unrealize(widget);
+    GTK_WIDGET_CLASS(hildon_vkb_renderer_parent_class)->unrealize(widget);
   }
 
 }
@@ -1177,9 +1155,9 @@ hildon_vkb_renderer_finalize(GObject *obj)
   if ( priv->sliding_key_timer )
     g_source_remove(priv->sliding_key_timer);
 
-  if (G_OBJECT_CLASS(parent_widget_class)->finalize)
+  if (G_OBJECT_CLASS(hildon_vkb_renderer_parent_class)->finalize)
   {
-    G_OBJECT_CLASS(parent_widget_class)->finalize(obj);
+    G_OBJECT_CLASS(hildon_vkb_renderer_parent_class)->finalize(obj);
   }
 }
 
@@ -2085,11 +2063,6 @@ hildon_vkb_renderer_class_init (HildonVKBRendererClass *klass)
   GtkWidgetClass *widget_class;
   tracef;
 
-  parent_widget_class = GTK_WIDGET_CLASS(g_type_class_peek_parent(klass));
-
-  g_type_class_add_private(klass, sizeof(HildonVKBRendererPrivate));
-
-
   object_class = G_OBJECT_CLASS(klass);
   widget_class = GTK_WIDGET_CLASS(klass);
 
@@ -2104,7 +2077,6 @@ hildon_vkb_renderer_class_init (HildonVKBRendererClass *klass)
   widget_class->button_press_event  = hildon_vkb_renderer_button_press;
   widget_class->button_release_event= hildon_vkb_renderer_button_release;
   widget_class->motion_notify_event = hildon_vkb_renderer_motion_notify;
-
 
   g_object_class_install_property(object_class,
                                   HILDON_VKB_RENDERER_PROP_DIMENSION,
@@ -2322,6 +2294,11 @@ hildon_vkb_renderer_class_init (HildonVKBRendererClass *klass)
                             hildon_vkb_renderer_marshal_VOID__STRING_BOOLEAN,
                             G_TYPE_NONE,
                             2, G_TYPE_STRING, G_TYPE_BOOLEAN);
+}
+
+static void
+hildon_vkb_renderer_class_finalize(HildonVKBRendererClass *klass)
+{
 }
 
 static void

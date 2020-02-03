@@ -23,29 +23,31 @@
 
 #define HILDON_VKB_RENDERER_TYPE (hildon_vkb_renderer_get_type())
 
-#define HILDON_VKB_RENDERER(obj) GTK_CHECK_CAST(obj, hildon_vkb_renderer_get_type(), HildonVKBRenderer)
+#define HILDON_VKB_RENDERER(obj) \
+  GTK_CHECK_CAST(obj, hildon_vkb_renderer_get_type(), HildonVKBRenderer)
 #define HILDON_VKB_RENDERER_CLASS(klass) \
         GTK_CHECK_CLASS_CAST(klass, hildon_vkb_renderer_get_type, \
                              HildonVKBRendererClass)
 #define HILDON_IS_VKB_RENDERER(obj) \
         GTK_CHECK_TYPE(obj, HILDON_VKB_RENDERER_TYPE )
-#define HILDON_VKB_RENDERER_GET_PRIVATE(obj) \
-        (G_TYPE_INSTANCE_GET_PRIVATE ((obj), HILDON_VKB_RENDERER_TYPE,\
-                                      HildonVKBRendererPrivate))
 
+typedef struct _HildonVKBRenderer HildonVKBRenderer;
+typedef struct _HildonVKBRendererClass HildonVKBRendererClass;
 typedef struct _HildonVKBRendererPrivate HildonVKBRendererPrivate;
+typedef struct _HildonVKBRendererLayoutInfo HildonVKBRendererLayoutInfo;
 
-typedef struct {
+struct _HildonVKBRenderer
+{
   GtkWidget parent;
   HildonVKBRendererPrivate * priv;
-}HildonVKBRenderer;
+};
 
-typedef struct{
-  guint num_layouts;
-  guint *type;
-  gchar **label;
-  guint num_rows;
-}HildonVKBRendererLayoutInfo;
+struct _HildonVKBRendererClass
+{
+  GtkWidgetClass parent;
+  void (*input) (HildonVKBRenderer*, gchar*, gboolean);
+  void (*illegal_input) (HildonVKBRenderer*, gchar*);
+};
 
 /* exports */
 GType hildon_vkb_renderer_get_type (void);
