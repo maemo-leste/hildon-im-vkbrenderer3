@@ -8,6 +8,8 @@ AC_SUBST([LIBHILDONIMVKBRENDERER_LT_VERSION],[$libhildon_im_vkbrenderer_lt_curre
 
 AM_INIT_AUTOMAKE
 
+AM_CONFIG_HEADER(config.h)
+
 # Specify dir for local macros
 AC_CONFIG_MACRO_DIR([m4])
 
@@ -17,6 +19,8 @@ AC_PROG_MAKE_SET
 AM_PROG_CC_STDC
 AC_PROG_LIBTOOL
 AC_HEADER_STDC
+
+PKG_CHECK_VAR([GLIB_GENMARSHAL], [glib-2.0], [glib_genmarshal])
 
 PKG_CHECK_MODULES(DEPS, gtk+-2.0 >= 2.4.0 gconf-2.0 > 2.0 glib-2.0 >= 2.20.3 x11 imlayouts)
 AC_SUBST(DEPS_CFLAGS)
