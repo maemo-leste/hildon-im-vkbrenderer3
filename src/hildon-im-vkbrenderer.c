@@ -79,7 +79,7 @@ struct _HildonVKBRendererPrivate
   guint num_sub_layouts;
   gboolean field_20;
   gboolean secondary_layout;
-  gboolean field_28;
+  gboolean paint_pixmap_pending;
   PangoLayout* pango_layout;
   GdkPixmap *pixmap;
   GtkRequisition requisition;
@@ -545,7 +545,7 @@ hildon_vkb_renderer_init (HildonVKBRenderer *self)
   priv->mode_bitmask = 0;
   priv->layout_type = 0;
   priv->field_20 = FALSE;
-  priv->field_28 = FALSE;
+  priv->paint_pixmap_pending = FALSE;
   priv->pixmap = 0;
   priv->field_3C = FALSE;
   priv->pressed_key = NULL;
@@ -968,7 +968,7 @@ hildon_vkb_renderer_paint_pixmap(HildonVKBRenderer *self)
   {
     if (priv->pixmap)
     {
-      priv->field_28 = FALSE;
+      priv->paint_pixmap_pending = FALSE;
       imlayout_vkb_init_buttons(priv->layout_collection,
                                 priv->layout,
                                 GTK_WIDGET(self)->allocation.width,
@@ -1028,7 +1028,7 @@ hildon_vkb_renderer_paint_pixmap(HildonVKBRenderer *self)
     }
   }
   else
-    priv->field_28 = TRUE;
+    priv->paint_pixmap_pending = TRUE;
 }
 
 void
@@ -1803,7 +1803,7 @@ hildon_vkb_renderer_expose(GtkWidget *widget, GdkEventExpose *event)
       return FALSE;
   }
 
-  if (priv->field_28)
+  if (priv->paint_pixmap_pending)
     hildon_vkb_renderer_paint_pixmap(self);
 
   gdk_region_get_rectangles(event->region, &rectangles, &n_rectangles);
