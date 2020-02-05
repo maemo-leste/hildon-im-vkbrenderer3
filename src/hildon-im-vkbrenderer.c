@@ -1566,7 +1566,7 @@ LABEL_22:
 
               if (priv->dead_key)
               {
-                g_signal_emit(self, signals[COMBINING_INPUT], 0, 0, 0);
+                g_signal_emit(self, signals[COMBINING_INPUT], 0, NULL);
                 hildon_vkb_renderer_input_key(self);
               }
 
@@ -1578,7 +1578,7 @@ LABEL_22:
 
               priv->dead_key = priv->pressed_key;
               g_signal_emit(self, signals[COMBINING_INPUT], 0,
-                            priv->pressed_key->labels, 0);
+                            priv->pressed_key->labels);
             }
           }
           else
@@ -1586,7 +1586,7 @@ LABEL_22:
             if (!is_shift_or_dead_key(pressed_key))
             {
               hildon_vkb_renderer_key_update(self, pressed_key, 0, 1);
-              g_signal_emit(self, signals[TEMP_INPUT], 0, 0, 1);
+              g_signal_emit(self, signals[TEMP_INPUT], 0, NULL, TRUE);
             }
           }
         }
@@ -1675,7 +1675,7 @@ LABEL_21:
             if (!(priv->pressed_key->key_type & 1))
             {
               g_signal_emit(HILDON_VKB_RENDERER(self), signals[TEMP_INPUT], 0,
-                            priv->pressed_key->labels, 1);
+                            priv->pressed_key->labels, TRUE);
             }
           }
         }
@@ -1693,7 +1693,10 @@ out:
                                      priv->pressed_key, 0, 1);
 
       if (!(priv->pressed_key->key_type & 1))
-        g_signal_emit(HILDON_VKB_RENDERER(self), signals[TEMP_INPUT], 0, 0, 1);
+      {
+        g_signal_emit(HILDON_VKB_RENDERER(self), signals[TEMP_INPUT], 0, NULL,
+                      TRUE);
+      }
     }
   }
 }
@@ -2053,8 +2056,7 @@ LABEL_12:
             {
               g_signal_emit(widget, signals[ILLEGAL_INPUT], 0,
                             key->key_type & KEY_TYPE_SLIDING ?
-                              key->labels[0] : (gchar *)key->labels,
-                            0);
+                              key->labels[0] : (gchar *)key->labels);
               return TRUE;
             }
 
@@ -2064,7 +2066,7 @@ LABEL_12:
                 !(key->key_flags & KEY_TYPE_SHIFT))
             {
               g_signal_emit(HILDON_VKB_RENDERER(widget), signals[TEMP_INPUT], 0,
-                            key->labels, 1);
+                            key->labels, TRUE);
             }
 
             if (priv->sliding_key)
@@ -2536,7 +2538,7 @@ hildon_vkb_renderer_clear_dead_key(HildonVKBRenderer *renderer)
       hildon_vkb_renderer_key_update(renderer, priv->dead_key, 0, 1);
 
     priv->dead_key = 0;
-    g_signal_emit(renderer, signals[COMBINING_INPUT], 0, 0, 0);
+    g_signal_emit(renderer, signals[COMBINING_INPUT], 0, NULL);
   }
 }
 
@@ -2571,7 +2573,7 @@ hildon_vkb_renderer_input_key(HildonVKBRenderer *self)
     if(priv->dead_key)
       hildon_vkb_renderer_accent_combine_input(self, (gchar *)key->labels, 1);
     else
-      g_signal_emit(self, signals[INPUT], 0, key->labels, 1);
+      g_signal_emit(self, signals[INPUT], 0, key->labels, TRUE);
   }
 }
 
