@@ -953,82 +953,67 @@ hildon_vkb_renderer_set_property(GObject *object, guint prop_id,
 static void
 hildon_vkb_renderer_paint_pixmap(HildonVKBRenderer *self)
 {
-  vkb_sub_layout *sub_layout;
-  vkb_key_section *key_section;
-  unsigned int i;
-
   HildonVKBRendererPrivate *priv;
-  tracef;
+  vkb_sub_layout *sub_layout;
+  int i;
 
+  tracef;
   g_return_if_fail(HILDON_IS_VKB_RENDERER(self));
 
   priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
 
-  if (priv->sub_layout)
+  if (!priv->sub_layout)
   {
-    if (priv->pixmap)
+    priv->paint_pixmap_pending = TRUE;
+    return;
+  }
+
+  if (!priv->pixmap)
+    return;
+
+  priv->paint_pixmap_pending = FALSE;
+  imlayout_vkb_init_buttons(priv->layout_collection,
+                            priv->layout,
+                            GTK_WIDGET(self)->allocation.width,
+                            GTK_WIDGET(self)->allocation.height);
+  gdk_draw_rectangle(priv->pixmap,
+                     GTK_WIDGET(self)->style->bg_gc[GTK_STATE_NORMAL],
+                     TRUE, 0, 0,
+                     priv->requisition.width,
+                     priv->requisition.height);
+  sub_layout = priv->sub_layout;
+
+  for (i = 0; i < sub_layout->num_key_sections; i++)
+  {
+    vkb_key_section *key_section = &sub_layout->key_sections[i];
+    int j;
+
+    for (j = 0; j < key_section->num_keys; j++)
     {
-      priv->paint_pixmap_pending = FALSE;
-      imlayout_vkb_init_buttons(priv->layout_collection,
-                                priv->layout,
-                                GTK_WIDGET(self)->allocation.width,
-                                GTK_WIDGET(self)->allocation.height);
+      vkb_key *key = &key_section->keys[j];
 
-      gdk_draw_rectangle(priv->pixmap,
-                         GTK_WIDGET(self)->style->bg_gc[0],
-                         1, 0, 0,
-                         priv->requisition.width,
-                         priv->requisition.height);
-      sub_layout = priv->sub_layout;
-
-      if (sub_layout->num_key_sections)
+      if(!priv->dead_key ||
+         g_strcmp0((gchar *)priv->dead_key->labels,
+                   (gchar *)key->labels))
       {
-        int section = 0;
-
-        do
+        if((key->key_flags & KEY_TYPE_SHIFT) == KEY_TYPE_SHIFT)
         {
-          key_section = &sub_layout->key_sections[section];
-
-          if (key_section->num_keys)
-          {
-            i = 0;
-
-            do
-            {
-              vkb_key *key = &key_section->keys[i];
-
-              if(!priv->dead_key ||
-                 g_strcmp0((gchar *)priv->dead_key->labels,
-                           (gchar *)key->labels))
-              {
-                if((key->key_flags & KEY_TYPE_SHIFT) == KEY_TYPE_SHIFT)
-                  key->gtk_state = priv->shift_active != 0;
-              }
-              else
-              {
-                key->gtk_state = 1;
-                priv->dead_key->gtk_state = 1;
-                priv->field_20 = FALSE;
-              }
-
-              hildon_vkb_renderer_key_update(self, key, -1, 0);
-              i++;
-              sub_layout = priv->sub_layout;
-              key_section = &sub_layout->key_sections[section];
-            }
-            while (key_section->num_keys > i);
-          }
-
-          ++section;
+          if (!priv->shift_active)
+            key->gtk_state = GTK_STATE_NORMAL;
+          else
+            key->gtk_state = GTK_STATE_ACTIVE;
         }
-        while (sub_layout->num_key_sections > section);
+      }
+      else
+      {
+        key->gtk_state = GTK_STATE_ACTIVE;
+        priv->dead_key->gtk_state = GTK_STATE_ACTIVE;
+        priv->field_20 = FALSE;
       }
 
-      priv->field_3C = TRUE;
+      hildon_vkb_renderer_key_update(self, key, -1, FALSE);
     }
   }
-  else
-    priv->paint_pixmap_pending = TRUE;
 }
 
 void
