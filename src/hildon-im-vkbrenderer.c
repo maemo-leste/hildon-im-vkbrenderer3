@@ -1140,8 +1140,8 @@ static void
 hildon_vkb_renderer_finalize(GObject *obj)
 {
   HildonVKBRendererPrivate *priv;
-  tracef;
 
+  tracef;
   g_return_if_fail(HILDON_IS_VKB_RENDERER(obj));
 
   priv = HILDON_VKB_RENDERER_GET_PRIVATE(HILDON_VKB_RENDERER(obj));
@@ -1175,18 +1175,16 @@ hildon_vkb_renderer_finalize(GObject *obj)
     g_source_remove(priv->sliding_key_timer);
 
   if (G_OBJECT_CLASS(hildon_vkb_renderer_parent_class)->finalize)
-  {
     G_OBJECT_CLASS(hildon_vkb_renderer_parent_class)->finalize(obj);
-  }
 }
 
 static int
-hildon_vkb_renderer_font_has_char(HildonVKBRenderer *self,gunichar uc)
+hildon_vkb_renderer_font_has_char(HildonVKBRenderer *self, gunichar uc)
 {
 
   cairo_t* ct;
   PangoLayout * layout;
-  char c;
+  gchar utf[6];
   gint num_chars;
   int unknown_glyphs_count;
 
@@ -1194,14 +1192,14 @@ hildon_vkb_renderer_font_has_char(HildonVKBRenderer *self,gunichar uc)
   g_return_val_if_fail(HILDON_IS_VKB_RENDERER(self),TRUE);
 
   ct = gdk_cairo_create(GTK_WIDGET(self)->window);
-  num_chars = g_unichar_to_utf8(uc, &c);
+  num_chars = g_unichar_to_utf8(uc, utf);
   layout = pango_cairo_create_layout(ct);
-  pango_layout_set_text(layout, &c, num_chars);
+  pango_layout_set_text(layout, utf, num_chars);
   unknown_glyphs_count = pango_layout_get_unknown_glyphs_count(layout);
   g_object_unref(layout);
   cairo_destroy(ct);
 
-  return unknown_glyphs_count==0;
+  return unknown_glyphs_count == 0;
 }
 
 static void
