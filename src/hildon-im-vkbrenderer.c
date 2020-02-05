@@ -398,7 +398,7 @@ hildon_vkb_renderer_get_numeric_sub(HildonVKBRenderer *renderer)
   HildonVKBRendererPrivate *priv;
 
   tracef;
-  g_return_val_if_fail (HILDON_IS_VKB_RENDERER (renderer),-1);
+  g_return_val_if_fail(HILDON_IS_VKB_RENDERER (renderer), -1);
 
   priv = HILDON_VKB_RENDERER_GET_PRIVATE(renderer);
 
@@ -697,30 +697,22 @@ hildon_vkb_renderer_get_property(GObject *object, guint prop_id, GValue *value,
       }
       else
       {
-        HildonVKBRendererLayoutInfo *li = (HildonVKBRendererLayoutInfo *)g_malloc0(sizeof(HildonVKBRendererLayoutInfo));
+        HildonVKBRendererLayoutInfo *li =
+            g_new0(HildonVKBRendererLayoutInfo, 1);
+        int i;
 
         li->num_layouts = priv->layout->num_sub_layouts;
-        li->type = (unsigned int *)g_malloc0(sizeof(guint*) * li->num_layouts);
-        li->label = (gchar **)g_malloc0(sizeof(gchar*) * li->num_layouts);
+        li->type = g_new0(guint, li->num_layouts);
+        li->label = g_new0(gchar *, li->num_layouts);
 
-        if (li->num_layouts > 0)
+        for (i = 0; i < li->num_layouts; i++)
         {
-          int i = 0;
-
-          do
-          {
-            li->type[i] = priv->layout->sub_layouts[i].type;
-            li->label[i] =
-                g_strdup(priv->layout->sub_layouts[i].label);
-            ++i;
-          }
-          while (li->num_layouts > i);
+          li->type[i] = priv->layout->sub_layouts[i].type;
+          li->label[i] = g_strdup(priv->layout->sub_layouts[i].label);
         }
 
         if (priv->sub_layout || (priv->sub_layout = priv->current_sub_layout))
-        {
           li->num_rows = priv->sub_layout->key_sections->num_rows;
-        }
         else
           li->num_rows = -1;
 
@@ -730,40 +722,36 @@ hildon_vkb_renderer_get_property(GObject *object, guint prop_id, GValue *value,
     case HILDON_VKB_RENDERER_PROP_LAYOUTS:
       if (priv->layout_collection)
       {
-        HildonVKBRendererLayoutInfo *li = (HildonVKBRendererLayoutInfo *)g_malloc0(sizeof(HildonVKBRendererLayoutInfo));
+        HildonVKBRendererLayoutInfo *li =
+            g_new0(HildonVKBRendererLayoutInfo, 1);
+        int i;
 
         li->num_layouts = priv->layout_collection->num_layouts;
-        li->type = (guint *)g_malloc0(sizeof(guint) * li->num_layouts);
-        li->label = 0;
+        li->type = g_new0(guint, li->num_layouts);
+        li->label = NULL;
 
-        if (li->num_layouts > 0)
+        for (i = 0; i < li->num_layouts; i++)
+          li->type [i] = priv->layout_collection->layout_types[i];
+
+        if (priv->sub_layout ||
+            (priv->sub_layout = priv->current_sub_layout) != 0)
         {
-          int i = 0;
-
-          do
-          {
-            li->type [i] = priv->layout_collection->layout_types[i];
-            i++;
-          }
-          while ( i != li->num_layouts );
-        }
-
-        if ( priv->sub_layout || (priv->sub_layout = priv->current_sub_layout) != 0 )
           li->num_rows = priv->sub_layout->key_sections->num_rows;
+        }
         else
           li->num_rows = -1;
 
         g_value_set_pointer(value, li);
       }
       else
-        g_value_set_pointer(value, FALSE);
+        g_value_set_pointer(value, NULL);
 
       break;
     case HILDON_VKB_RENDERER_PROP_SUBLAYOUT:
-      if (!priv->sub_layout && /* CHECKME !!! */
+      if (!priv->sub_layout &&
           !hildon_vkb_renderer_load_layout(HILDON_VKB_RENDERER(object), 1))
       {
-        g_value_set_int(value, FALSE);
+        g_value_set_int(value, 0);
       }
       else
         g_value_set_int(value, priv->num_sub_layouts);
