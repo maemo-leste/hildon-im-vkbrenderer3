@@ -815,25 +815,27 @@ hildon_vkb_renderer_set_property(GObject *object, guint prop_id,
   HildonVKBRendererPrivate *priv;
 
   tracef;
+  g_return_if_fail(HILDON_IS_VKB_RENDERER(object));
 
-  g_return_if_fail(HILDON_IS_VKB_RENDERER (object));
-
-  priv = HILDON_VKB_RENDERER_GET_PRIVATE (HILDON_VKB_RENDERER(object));
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(HILDON_VKB_RENDERER(object));
 
   switch (prop_id)
   {
-    default:
-      G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
-      break;
     case HILDON_VKB_RENDERER_PROP_GESTURE_RANGE:
+    {
       priv->gesture_range = g_value_get_int(value);
       break;
+    }
     case HILDON_VKB_RENDERER_PROP_CYCLE_TIMEOUT:
+    {
       priv->sliding_key_timeout = g_value_get_int(value);
       break;
+    }
     case HILDON_VKB_RENDERER_PROP_REPEAT_INTERVAL:
+    {
       priv->key_repeat_interval = g_value_get_int(value);
       break;
+    }
     case HILDON_VKB_RENDERER_PROP_STYLE_NORMAL:
     case HILDON_VKB_RENDERER_PROP_STYLE_SPECIAL:
     case HILDON_VKB_RENDERER_PROP_STYLE_SLIDE:
@@ -841,10 +843,13 @@ hildon_vkb_renderer_set_property(GObject *object, guint prop_id,
     case HILDON_VKB_RENDERER_PROP_STYLE_TAB:
     case HILDON_VKB_RENDERER_PROP_STYLE_BACKSPACE:
     case HILDON_VKB_RENDERER_PROP_STYLE_SHIFT:
-      update_style(HILDON_VKB_RENDERER (object), g_value_get_string(value),
-                   prop_id, 0);
+    {
+      update_style(HILDON_VKB_RENDERER(object), g_value_get_string(value),
+                   prop_id, FALSE);
       break;
+    }
     case HILDON_VKB_RENDERER_PROP_OPTION:
+    {
       if (priv->sub_layout)
       {
         if (priv->secondary_layout == g_value_get_boolean(value))
@@ -855,8 +860,11 @@ hildon_vkb_renderer_set_property(GObject *object, guint prop_id,
       }
       else
         priv->secondary_layout = g_value_get_boolean(value);
+
       break;
+    }
     case HILDON_VKB_RENDERER_PROP_MODE:
+    {
       if (priv->sub_layout)
       {
         if (priv->mode_bitmask != g_value_get_int(value))
@@ -867,8 +875,11 @@ hildon_vkb_renderer_set_property(GObject *object, guint prop_id,
       }
       else
         priv->mode_bitmask = g_value_get_int(value);
+
       break;
+    }
     case HILDON_VKB_RENDERER_PROP_SUBLAYOUT:
+    {
       priv->num_sub_layouts = g_value_get_int(value);
 
       if (priv->sub_layout)
@@ -878,62 +889,64 @@ hildon_vkb_renderer_set_property(GObject *object, guint prop_id,
       }
 
       priv->sub_layout = NULL;
-    break;
-    case HILDON_VKB_RENDERER_PROP_COLLECTION_FILE:
-    {
-      const gchar* collection_file = g_value_get_string(value);
-
-      if (!collection_file)
-        return;
-
-      if ( !priv->layout_collection )
-        goto LABEL_39;
-
-      if (strcmp(priv->layout_collection->filename, collection_file))
-      {
-        imlayout_vkb_free_layout_collection(priv->layout_collection);
-  LABEL_39:
-        priv->layout_collection = imlayout_vkb_load_file(collection_file);
-
-        if (!priv->layout)
-          goto LABEL_43;
-
-        goto LABEL_40;
-      }
       break;
     }
     case HILDON_VKB_RENDERER_PROP_DIMENSION:
     {
-      GtkRequisition * requisition = (GtkRequisition *)g_value_get_boxed(value);
+      GtkRequisition *requisition = g_value_get_boxed(value);
 
       priv->requisition.height = requisition->height;
-      priv->requisition.width = requisition->width;;
+      priv->requisition.width = requisition->width;
       break;
     }
+    case HILDON_VKB_RENDERER_PROP_COLLECTION_FILE:
+    {
+      const gchar *collection_file = g_value_get_string(value);
+
+      if (!collection_file)
+        return;
+
+      if (priv->layout_collection)
+      {
+        if (strcmp(priv->layout_collection->filename, collection_file))
+          imlayout_vkb_free_layout_collection(priv->layout_collection);
+        else
+          break;
+      }
+
+      priv->layout_collection = imlayout_vkb_load_file(collection_file);
+    }
     case HILDON_VKB_RENDERER_PROP_LAYOUT:
-      priv->layout_type = g_value_get_int(value);
+    {
+      if (prop_id == HILDON_VKB_RENDERER_PROP_LAYOUT)
+        priv->layout_type = g_value_get_int(value);
 
       if (priv->layout)
       {
-LABEL_40:
         if (priv->WC_language)
           imlayout_vkb_free_layout(priv->WC_language);
 
         priv->WC_language = priv->layout;
         priv->current_sub_layout = priv->sub_layout;
       }
-LABEL_43:
+
       priv->layout = NULL;
       priv->sub_layout = NULL;
 
       if (priv->dead_key)
       {
-        g_signal_emit(HILDON_VKB_RENDERER (object), signals[COMBINING_INPUT],
-                      0, 0, 0);
+        g_signal_emit(HILDON_VKB_RENDERER(object), signals[COMBINING_INPUT],
+                      0, NULL);
       }
 
-      priv->dead_key = 0;
+      priv->dead_key = NULL;
       break;
+    }
+    default:
+    {
+      G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
+      break;
+    }
   }
 }
 
