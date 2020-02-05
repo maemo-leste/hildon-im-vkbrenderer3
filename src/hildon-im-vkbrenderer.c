@@ -1207,164 +1207,97 @@ hildon_vkb_renderer_accent_combine_input(HildonVKBRenderer *self,
                                          const char *combine, gboolean unk)
 {
   HildonVKBRendererPrivate *priv;
-  vkb_key *key;
-  gunichar uc_label;
-  gchar *s_normal;
-  gchar* s;
-  gunichar str[2];
-  tracef;
+  gchar *norm;
+  gchar *utf;
+  gunichar ucs[2];
 
+  tracef;
   g_return_if_fail(HILDON_IS_VKB_RENDERER(self));
 
   priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
 
-  key = priv->dead_key;
+  if (!priv->dead_key)
+    return;
 
-  if (key)
+  switch (g_utf8_get_char((gchar *)priv->dead_key->labels))
   {
-    uc_label = g_utf8_get_char((gchar *)key->labels);
-
-    if (uc_label == 0xB8)
-    {
-      str[1] = 0x327u;
-      goto LABEL_14;
-    }
-    if ( uc_label > 0xB8 )
-    {
-      if ( uc_label == 0x2D9 )
-      {
-        str[1] = 0x307u;
-        goto LABEL_14;
-      }
-      if ( uc_label <= 0x2D9 )
-      {
-        if ( uc_label == 0x2C7 )
-        {
-          str[1] = 0x30Cu;
-          goto LABEL_14;
-        }
-        if ( uc_label > 0x2C7 )
-        {
-          if ( uc_label == 0x2C8 )
-          {
-            str[1] = 0x30Du;
-            goto LABEL_14;
-          }
-          if ( uc_label == 0x2D8 )
-          {
-            str[1] = 0x306u;
-            goto LABEL_14;
-          }
-        }
-        else
-        {
-          if ( uc_label == 0x2BD )
-          {
-            str[1] = 0x314u;
-            goto LABEL_14;
-          }
-        }
-        goto LABEL_13;
-      }
-      if ( uc_label == 0x2DB )
-      {
-        str[1] = 0x328u;
-        goto LABEL_14;
-      }
-      if ( uc_label >= 0x2DB )
-      {
-        if ( uc_label != 0x2DD )
-        {
-          if ( uc_label == 0x385 )
-          {
-            str[1] = 0x344u;
-            goto LABEL_14;
-          }
-          goto LABEL_13;
-        }
-        goto LABEL_20;
-      }
-    }
-    else
-    {
-      if ( uc_label == 0x7E )
-      {
-        str[1] = 0x303u;
-        goto LABEL_14;
-      }
-      if ( uc_label <= 0x7E )
-      {
-        if ( uc_label != 0x27 )
-        {
-          if ( uc_label > 0x27 )
-          {
-            if ( uc_label == 0x5E )
-            {
-              str[1] = 0x302u;
-              goto LABEL_14;
-            }
-            if ( uc_label == 0x60 )
-            {
-              str[1] = 0x300u;
-              goto LABEL_14;
-            }
-            goto LABEL_13;
-          }
-          if ( uc_label != 0x22 )
-          {
-LABEL_13:
-            str[1] = 0;
-LABEL_14:
-            str[0] = g_utf8_get_char(combine);
-            s = g_ucs4_to_utf8(str, 2, 0, 0, 0);
-            s_normal = g_utf8_normalize(s, -1, G_NORMALIZE_DEFAULT_COMPOSE);
-
-            if ( strlen(s) > strlen(s_normal) &&
-                 strcmp(s, s_normal) &&
-                 hildon_vkb_renderer_font_has_char(HILDON_VKB_RENDERER(self),g_utf8_get_char(s_normal)))
-            {
-              g_signal_emit(self, signals[INPUT], 0, s_normal, unk);
-              g_free(s);
-              g_free(s_normal);
-              return;
-            }
-            g_signal_emit(self, signals[INPUT], 0, combine, unk);
-            g_free(s);
-            g_free(s_normal);
-            return;
-          }
-LABEL_20:
-          str[1] = 0x30Bu;
-          goto LABEL_14;
-        }
-LABEL_44:
-        str[1] = 0x301u;
-        goto LABEL_14;
-      }
-      if ( uc_label == 0xAF )
-      {
-        str[1] = 0x304u;
-        goto LABEL_14;
-      }
-      if ( uc_label <= 0xAF )
-      {
-        if ( uc_label == 168 )
-        {
-          str[1] = 0x308u;
-          goto LABEL_14;
-        }
-        goto LABEL_13;
-      }
-      if ( uc_label != 0xB0 )
-      {
-        if ( uc_label != 0xB4 )
-          goto LABEL_13;
-        goto LABEL_44;
-      }
-    }
-    str[1] = 0x30Au;
-    goto LABEL_14;
+    case 0x22:
+      ucs[1] = 0x30B;
+      break;
+    case 0x27:
+      ucs[1] = 0x301;
+      break;
+    case 0x5E:
+      ucs[1] = 0x302;
+      break;
+    case 0x60:
+      ucs[1] = 0x300;
+      break;
+    case 0x7E:
+      ucs[1] = 0x303;
+      break;
+    case 0xA8:
+      ucs[1] = 0x308;
+      break;
+    case 0xAF:
+      ucs[1] = 0x304;
+      break;
+    case 0xB0:
+      ucs[1] = 0x30A;
+      break;
+    case 0xB4:
+      ucs[1] = 0x301;
+      break;
+    case 0xB8:
+      ucs[1] = 0x327;
+      break;
+    case 0x2BD:
+      ucs[1] = 0x314;
+      break;
+    case 0x2C7:
+      ucs[1] = 0x30C;
+      break;
+    case 0x2C8:
+      ucs[1] = 0x30D;
+      break;
+    case 0x2D8:
+      ucs[1] = 0x306;
+      break;
+    case 0x2D9:
+      ucs[1] = 0x307;
+      break;
+    case 0x2DA:
+      ucs[1] = 0x30A;
+      break;
+    case 0x2DB:
+      ucs[1] = 0x328;
+      break;
+    case 0x2DD:
+      ucs[1] = 0x30B;
+      break;
+    case 0x385:
+      ucs[1] = 0x344;
+      break;
+    default:
+      ucs[1] = 0;
+      break;
   }
+
+  ucs[0] = g_utf8_get_char(combine);
+  utf = g_ucs4_to_utf8(ucs, G_N_ELEMENTS(ucs), NULL, NULL, NULL);
+  norm = g_utf8_normalize(utf, -1, G_NORMALIZE_DEFAULT_COMPOSE);
+
+  if (strlen(utf) > strlen(norm) && strcmp(utf, norm) &&
+      hildon_vkb_renderer_font_has_char(HILDON_VKB_RENDERER(self),
+                                        g_utf8_get_char(norm)))
+  {
+    g_signal_emit(self, signals[INPUT], 0, norm, unk);
+  }
+  else
+    g_signal_emit(self, signals[INPUT], 0, combine, unk);
+
+  g_free(utf);
+  g_free(norm);
 }
 
 static void
