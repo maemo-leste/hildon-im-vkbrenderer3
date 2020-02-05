@@ -127,7 +127,7 @@ G_DEFINE_DYNAMIC_TYPE_EXTENDED(
   G_ADD_PRIVATE_DYNAMIC(HildonVKBRenderer)
 );
 
-static void hildon_vkb_renderer_key_update(HildonVKBRenderer *self, vkb_key *key, int shift_active, gboolean repaint);
+static void hildon_vkb_renderer_key_update(HildonVKBRenderer *self, vkb_key *key, gint state, gboolean repaint);
 static void hildon_vkb_renderer_input_key(HildonVKBRenderer *self);
 static void hildon_vkb_renderer_paint_pixmap(HildonVKBRenderer *self);
 static void hildon_vkb_renderer_input_slide(HildonVKBRenderer *self, gboolean unk);
@@ -2392,7 +2392,7 @@ hildon_vkb_renderer_class_finalize(HildonVKBRendererClass *klass)
 
 static void
 hildon_vkb_renderer_key_update(HildonVKBRenderer *self, vkb_key *key,
-                               int shift_active, gboolean repaint)
+                               gint state, gboolean repaint)
 {
   HildonVKBRendererPrivate *priv;
   GtkStyle *style;
@@ -2414,8 +2414,8 @@ hildon_vkb_renderer_key_update(HildonVKBRenderer *self, vkb_key *key,
   else
     tmp_key = key;
 
-  if(shift_active >= 0)
-    tmp_key->gtk_state = shift_active;
+  if(state >= 0)
+    tmp_key->gtk_state = state;
 
   if(key->key_type & KEY_TYPE_SLIDING)
     style = priv->slide.gtk_style;
