@@ -1036,18 +1036,17 @@ hildon_vkb_renderer_size_allocate(GtkWidget *widget, GdkRectangle *allocation)
     hildon_vkb_renderer_paint_pixmap(HILDON_VKB_RENDERER(widget));
 }
 
-void
+static void
 hildon_vkb_renderer_realize(GtkWidget *widget)
 {
   HildonVKBRendererPrivate *priv;
-  GdkWindow *parent;
-  GdkScreen * gdkscreen;
+  GdkScreen *gdkscreen;
   GdkDisplay *gdkdisplay;
   int root_depth;
   cairo_t *cr;
   GdkWindowAttr attributes;
-  tracef;
 
+  tracef;
   g_return_if_fail(HILDON_IS_VKB_RENDERER(widget));
 
   priv = HILDON_VKB_RENDERER_GET_PRIVATE(HILDON_VKB_RENDERER(widget));
@@ -1059,17 +1058,20 @@ hildon_vkb_renderer_realize(GtkWidget *widget)
   attributes.width = widget->allocation.width;
   attributes.height = widget->allocation.height;
   attributes.window_type = GDK_WINDOW_CHILD;
-  attributes.event_mask = gtk_widget_get_events(widget) | 0x312;
-  attributes.visual = (GdkVisual *)gtk_widget_get_visual(widget);
-  attributes.colormap = (GdkColormap *)gtk_widget_get_colormap(widget);
-  attributes.wclass = 0;
-  parent = (GdkWindow *)gtk_widget_get_parent_window(widget);
+  attributes.event_mask =
+      gtk_widget_get_events(widget) | GDK_EXPOSURE_MASK |
+      GDK_BUTTON_MOTION_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK;
+  attributes.visual = gtk_widget_get_visual(widget);
+  attributes.colormap = gtk_widget_get_colormap(widget);
+  attributes.wclass = GDK_INPUT_OUTPUT;
 
-  widget->window = gdk_window_new(parent, &attributes, 0x6Cu);
+  widget->window = gdk_window_new(
+        gtk_widget_get_parent_window(widget), &attributes,
+        GDK_WA_X | GDK_WA_Y | GDK_WA_COLORMAP | GDK_WA_VISUAL);
   gdk_window_set_user_data(widget->window, widget);
 
   widget->style = gtk_style_attach(widget->style, widget->window);
-  gtk_style_set_background(widget->style, widget->window, 0);
+  gtk_style_set_background(widget->style, widget->window, GTK_STATE_NORMAL);
 
   gdkscreen = gtk_widget_get_screen(widget);
   gdkdisplay = gdk_screen_get_display(gdkscreen);
@@ -1078,17 +1080,18 @@ hildon_vkb_renderer_realize(GtkWidget *widget)
         XScreenOfDisplay(gdk_x11_display_get_xdisplay(gdkdisplay),
                          gdk_x11_screen_get_screen_number(gdkscreen)));
 
-  priv->pixmap = gdk_pixmap_new(0,
+  priv->pixmap = gdk_pixmap_new(NULL,
                                 priv->requisition.width,
                                 priv->requisition.height,
                                 root_depth);
 
   cr = gdk_cairo_create(widget->window);
   priv->pango_layout = pango_cairo_create_layout(cr);
-  if ( priv->font_desc )
-    pango_font_description_free(priv->font_desc);
-  priv->font_desc = pango_font_description_copy(widget->style->font_desc);
 
+  if (priv->font_desc)
+    pango_font_description_free(priv->font_desc);
+
+  priv->font_desc = pango_font_description_copy(widget->style->font_desc);
   pango_font_description_set_size(
         priv->font_desc,
         1.2 * pango_font_description_get_size(priv->font_desc));
