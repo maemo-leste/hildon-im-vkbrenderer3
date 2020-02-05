@@ -1014,17 +1014,17 @@ hildon_vkb_renderer_paint_pixmap(HildonVKBRenderer *self)
   }
 }
 
-void
+static void
 hildon_vkb_renderer_size_allocate(GtkWidget *widget, GdkRectangle *allocation)
 {
-  GdkRectangle r;
+  GdkRectangle rect;
 
   tracef;
-  memcpy(&r, &widget->allocation, sizeof(r));
+  memcpy(&rect, &widget->allocation, sizeof(rect));
 
   g_return_if_fail(HILDON_IS_VKB_RENDERER(widget));
 
-  memcpy(&widget->allocation, allocation, sizeof(GtkAllocation));
+  memcpy(&widget->allocation, allocation, sizeof(widget->allocation));
 
   if(GTK_WIDGET_REALIZED(GTK_OBJECT(widget)))
   {
@@ -1032,7 +1032,7 @@ hildon_vkb_renderer_size_allocate(GtkWidget *widget, GdkRectangle *allocation)
                            allocation->width, allocation->height);
   }
 
-  if (allocation->width != r.width || allocation->height != r.height)
+  if (allocation->width != rect.width || allocation->height != rect.height)
     hildon_vkb_renderer_paint_pixmap(HILDON_VKB_RENDERER(widget));
 }
 
