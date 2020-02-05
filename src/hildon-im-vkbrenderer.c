@@ -83,7 +83,6 @@ struct _HildonVKBRendererPrivate
   PangoLayout* pango_layout;
   GdkPixmap *pixmap;
   GtkRequisition requisition;
-  gboolean field_3C;
   vkb_key* pressed_key;
   vkb_key* dead_key;
   gdouble x;
@@ -541,13 +540,12 @@ hildon_vkb_renderer_init (HildonVKBRenderer *self)
   priv->layout = NULL;
   priv->sub_layout = NULL;
   priv->WC_language = NULL;
-  priv->current_sub_layout = 0;
+  priv->current_sub_layout = NULL;
   priv->mode_bitmask = 0;
   priv->layout_type = 0;
   priv->field_20 = FALSE;
   priv->paint_pixmap_pending = FALSE;
-  priv->pixmap = 0;
-  priv->field_3C = FALSE;
+  priv->pixmap = NULL;
   priv->pressed_key = NULL;
   priv->x = 0;
   priv->y = 0;
