@@ -1105,7 +1105,7 @@ hildon_vkb_renderer_realize(GtkWidget *widget)
   cairo_destroy(cr);
 }
 
-void
+static void
 hildon_vkb_renderer_unrealize(GtkWidget *widget)
 {
   HildonVKBRendererPrivate *priv;
@@ -1133,9 +1133,7 @@ hildon_vkb_renderer_unrealize(GtkWidget *widget)
   }
 
   if (GTK_WIDGET_CLASS(hildon_vkb_renderer_parent_class)->unrealize)
-  {
     GTK_WIDGET_CLASS(hildon_vkb_renderer_parent_class)->unrealize(widget);
-  }
 }
 
 static void
