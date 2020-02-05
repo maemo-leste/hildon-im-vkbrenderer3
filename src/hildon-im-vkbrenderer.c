@@ -1306,59 +1306,54 @@ hildon_vkb_renderer_input_slide(HildonVKBRenderer *self, gboolean unk)
   vkb_key *sliding_key;
   HildonVKBRendererPrivate *priv;
   gchar *label;
-  tracef;
 
+  tracef;
   g_return_if_fail(HILDON_IS_VKB_RENDERER(self));
 
   priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
   sliding_key = priv->sliding_key;
 
-  if (sliding_key)
+  if (!sliding_key)
+    return;
+
+  if (unk)
   {
-    if (unk)
-    {
-      if (sliding_key->current_slide_key)
-        label = sliding_key->labels[sliding_key->current_slide_key - 1];
-      else
-        label = sliding_key->labels[sliding_key->byte_count - 1];
-
-      sliding_key->width = 0;
-      priv->sliding_key->current_slide_key = 0;
-
-      gtk_widget_queue_draw_area(GTK_WIDGET(self),
-                                 priv->sliding_key->left,
-                                 priv->sliding_key->top,
-                                 priv->sliding_key->right - priv->sliding_key->left,
-                                 priv->sliding_key->bottom - priv->sliding_key->top);
-
-      priv->sliding_key = 0;
-      if ( priv->sliding_key_timer )
-      {
-        g_source_remove(priv->sliding_key_timer);
-        priv->sliding_key_timer = 0;
-      }
-      if ( priv->dead_key )
-        goto has_dead_key;
-    }
+    if (sliding_key->current_slide_key)
+      label = sliding_key->labels[sliding_key->current_slide_key - 1];
     else
-    {
-      label = sliding_key->labels[sliding_key->current_slide_key];
+      label = sliding_key->labels[sliding_key->byte_count - 1];
 
-      if (priv->dead_key)
-      {
-has_dead_key:
-        hildon_vkb_renderer_accent_combine_input(self, label, unk);
-        return;
-      }
+    sliding_key->width = 0;
+    priv->sliding_key->current_slide_key = 0;
+
+    gtk_widget_queue_draw_area(
+          GTK_WIDGET(self),
+          priv->sliding_key->left,
+          priv->sliding_key->top,
+          priv->sliding_key->right - priv->sliding_key->left,
+          priv->sliding_key->bottom - priv->sliding_key->top);
+
+    priv->sliding_key = 0;
+
+    if (priv->sliding_key_timer)
+    {
+      g_source_remove(priv->sliding_key_timer);
+      priv->sliding_key_timer = 0;
     }
-    g_signal_emit(self, signals[INPUT], 0, label, unk);
   }
+  else
+    label = sliding_key->labels[sliding_key->current_slide_key];
+
+  if (priv->dead_key)
+    hildon_vkb_renderer_accent_combine_input(self, label, unk);
+  else
+    g_signal_emit(self, signals[INPUT], 0, label, unk);
 }
 
 static gboolean
 is_shift_or_dead_key(vkb_key *key)
 {
-  if ( key->key_flags & KEY_TYPE_DEAD )
+  if (key->key_flags & KEY_TYPE_DEAD)
     return TRUE;
 
   return ((key->key_flags & KEY_TYPE_SHIFT) == KEY_TYPE_SHIFT);
