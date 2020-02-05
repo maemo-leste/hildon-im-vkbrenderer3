@@ -775,13 +775,14 @@ hildon_vkb_renderer_get_property(GObject *object, guint prop_id, GValue *value,
       break;
   }
 }
-void hildon_vkb_renderer_update_option(GObject * self)
+
+static void
+hildon_vkb_renderer_update_option(GObject * self)
 {
   HildonVKBRenderer *renderer;
   HildonVKBRendererPrivate *priv;
-  vkb_key_section *key_section;
-  vkb_key *key;
   vkb_sub_layout *sub_layout;
+  int i,j;
 
   tracef;
   g_return_if_fail (HILDON_IS_VKB_RENDERER (self));
@@ -790,45 +791,19 @@ void hildon_vkb_renderer_update_option(GObject * self)
   priv = HILDON_VKB_RENDERER_GET_PRIVATE(renderer);
   sub_layout = priv->sub_layout;
 
-  if (sub_layout && sub_layout->num_key_sections)
+  if (!sub_layout)
+    return;
+
+  for (i = 0; i < sub_layout->num_key_sections; i++)
   {
-    int section = 0;
+    vkb_key_section *section = &sub_layout->key_sections[i];
 
-    while (1)
+    for (j = 0; section->num_keys; j++)
     {
-      key_section = &sub_layout->key_sections[section];
+      vkb_key *key = &section->keys[j];
 
-      if (key_section->num_keys)
-      {
-        int i = 0;
-
-        do
-        {
-          while (1)
-          {
-            key = &key_section->keys[i];
-
-            if (key->key_type & 4)
-              break;
-
-            i++;
-            key_section = &sub_layout->key_sections[section];
-
-            if (key_section->num_keys <= i)
-              goto LABEL_27;
-          }
-
-          hildon_vkb_renderer_key_update(renderer, key, -1, 1);
-          i++;
-          key_section = &sub_layout->key_sections[section];
-        }
-        while (key_section->num_keys > i);
-      }
-LABEL_27:
-      section++;
-
-      if (sub_layout->num_key_sections <= section)
-        return;
+      if (key->key_type & KEY_TYPE_HEXA)
+        hildon_vkb_renderer_key_update(renderer, key, -1, TRUE);
     }
   }
 }
