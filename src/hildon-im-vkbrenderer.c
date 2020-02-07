@@ -126,6 +126,12 @@ G_DEFINE_DYNAMIC_TYPE_EXTENDED(
   G_ADD_PRIVATE_DYNAMIC(HildonVKBRenderer)
 );
 
+#define KEY_TYPE_ALL \
+  (KEY_TYPE_ALPHA | KEY_TYPE_NUMERIC | KEY_TYPE_HEXA | \
+  KEY_TYPE_TELE | KEY_TYPE_SPECIAL | KEY_TYPE_DEAD | KEY_TYPE_WHITESPACE | \
+  KEY_TYPE_EXTRA_BYTE | KEY_TYPE_RAW | KEY_TYPE_TONE | KEY_TYPE_TAB | \
+  KEY_TYPE_BACKSPACE | KEY_TYPE_SHIFT)
+
 static void hildon_vkb_renderer_key_update(HildonVKBRenderer *self, vkb_key *key, gint state, gboolean repaint);
 static void hildon_vkb_renderer_input_key(HildonVKBRenderer *self);
 static void hildon_vkb_renderer_paint_pixmap(HildonVKBRenderer *self);
@@ -1774,7 +1780,7 @@ hildon_vkb_renderer_expose(GtkWidget *widget, GdkEventExpose *event)
             current = key->current_slide_key;
             prev = key->current_slide_key - 1;
           }
-          else if ( priv->sliding_key_timer )
+          else if (priv->sliding_key_timer)
           {
             next = byte_count + 1;
             current = byte_count;
@@ -2069,7 +2075,7 @@ hildon_vkb_renderer_class_init (HildonVKBRendererClass *klass)
           "current active sublayout",
           "currently active sublayout indicated by sublayout index",
           0,
-          2147483647,
+          G_MAXINT,
           0,
           G_PARAM_READABLE | G_PARAM_WRITABLE));
 
@@ -2095,9 +2101,9 @@ hildon_vkb_renderer_class_init (HildonVKBRendererClass *klass)
           "mode",
           "mode bitmask",
           "enable/disable mode for this layout",
-          1,
-          8191,
-          8191,
+          KEY_TYPE_ALPHA,
+          KEY_TYPE_ALL,
+          KEY_TYPE_ALL,
           G_PARAM_READABLE | G_PARAM_WRITABLE | G_PARAM_CONSTRUCT));
 
   g_object_class_install_property(
@@ -2179,7 +2185,7 @@ hildon_vkb_renderer_class_init (HildonVKBRendererClass *klass)
           "repeat rate in ms",
           "set length of the key repeating rate",
           0,
-          2147483647,
+          G_MAXINT,
           0,
           G_PARAM_READABLE | G_PARAM_WRITABLE | G_PARAM_CONSTRUCT));
 
@@ -2190,7 +2196,7 @@ hildon_vkb_renderer_class_init (HildonVKBRendererClass *klass)
           "the timeout for sliding key in ms",
           "set the timeout for finalized slidingkey input",
           0,
-          2147483647,
+          G_MAXINT,
           750,
           G_PARAM_READABLE | G_PARAM_WRITABLE | G_PARAM_CONSTRUCT));
 
@@ -2210,7 +2216,7 @@ hildon_vkb_renderer_class_init (HildonVKBRendererClass *klass)
           "the gesture recognition range threshold in px",
           "set the range for gestures",
           0,
-          2147483647,
+          G_MAXINT,
           20,
           G_PARAM_READABLE | G_PARAM_WRITABLE | G_PARAM_CONSTRUCT));
 
