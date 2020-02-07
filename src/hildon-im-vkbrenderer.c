@@ -328,7 +328,7 @@ hildon_vkb_renderer_load_layout(HildonVKBRenderer *self, int layout)
   HildonVKBRendererPrivate *priv;
 
   tracef;
-  g_return_val_if_fail (HILDON_IS_VKB_RENDERER (self),FALSE);
+  g_return_val_if_fail (HILDON_IS_VKB_RENDERER (self), FALSE);
 
   priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
 
@@ -1463,7 +1463,7 @@ LABEL_22:
         {
           hildon_vkb_renderer_key_update(
                 self, pressed_key, (priv->shift_active = (!priv->shift_active)),
-                1);
+                TRUE);
           hildon_vkb_renderer_input_key(self);
         }
         else
@@ -1523,7 +1523,7 @@ out:
 }
 
 static void
-get_key_from_coordinates(HildonVKBRenderer *self,GdkEventMotion *event)
+get_key_from_coordinates(HildonVKBRenderer *self, GdkEventMotion *event)
 {
   int i,j;
   vkb_key* key;
@@ -1533,6 +1533,7 @@ get_key_from_coordinates(HildonVKBRenderer *self,GdkEventMotion *event)
   g_return_if_fail(self);
 
   priv=HILDON_VKB_RENDERER_GET_PRIVATE(self);
+
 
   if (priv->sub_layout)
   {
@@ -1570,26 +1571,22 @@ LABEL_21:
 
       }
 
-      if (key->gtk_state != 4)
+      if (key->gtk_state != 4 && key != priv->pressed_key &&
+          !priv->key_repeat_timer)
       {
-        if (key != priv->pressed_key)
-        {
-          if (!priv->key_repeat_timer)
-          {
-            hildon_vkb_renderer_key_update(HILDON_VKB_RENDERER(self),
-                                           priv->pressed_key, 0, 1);
-            priv->pressed_key = key;
-            hildon_vkb_renderer_key_update(
-                  HILDON_VKB_RENDERER(self), key, 1, 1);
+        hildon_vkb_renderer_key_update(HILDON_VKB_RENDERER(self),
+                                       priv->pressed_key, 0, 1);
+        priv->pressed_key = key;
+        hildon_vkb_renderer_key_update(
+              HILDON_VKB_RENDERER(self), key, 1, 1);
 
-            if (!(priv->pressed_key->key_type & 1))
-            {
-              g_signal_emit(HILDON_VKB_RENDERER(self), signals[TEMP_INPUT], 0,
-                            priv->pressed_key->labels, TRUE);
-            }
-          }
+        if (!(priv->pressed_key->key_type & 1))
+        {
+          g_signal_emit(HILDON_VKB_RENDERER(self), signals[TEMP_INPUT], 0,
+                        priv->pressed_key->labels, TRUE);
         }
       }
+
       return;
     }
   }
@@ -1683,23 +1680,16 @@ static gboolean
 hildon_vkb_renderer_expose(GtkWidget *widget, GdkEventExpose *event)
 {
   HildonVKBRenderer *self;
+  HildonVKBRendererPrivate *priv;
   vkb_sub_layout *sub_layout;
-  vkb_key_section *key_section;
-  vkb_key *key;
   GtkStyle *style;
   PangoLayoutIter *iter;
-  unsigned int j;
   cairo_t *ct;
   gchar *text;
-  gchar *tmp_text;
-  GdkRectangle src;
-  GdkRectangle dest;
   int height;
   int i;
   int n_rectangles;
   GdkRectangle *rectangles;
-
-  HildonVKBRendererPrivate *priv;
 
   tracef;
   g_return_val_if_fail(HILDON_IS_VKB_RENDERER(widget),FALSE);
@@ -1707,82 +1697,52 @@ hildon_vkb_renderer_expose(GtkWidget *widget, GdkEventExpose *event)
   self = HILDON_VKB_RENDERER(widget);
   priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
 
-  if (!priv->sub_layout && !hildon_vkb_renderer_load_layout(self, 1))
+  if (!((priv->sub_layout || hildon_vkb_renderer_load_layout(self, 1) ||
+         priv->sub_layout) && priv->pixmap))
   {
-    if (!priv->sub_layout && priv->pixmap)
-      return FALSE;
+    return FALSE;
   }
 
   if (priv->paint_pixmap_pending)
     hildon_vkb_renderer_paint_pixmap(self);
 
   gdk_region_get_rectangles(event->region, &rectangles, &n_rectangles);
-  i = 0;
 
-  if (n_rectangles > 0)
+  for (i = 0; i < n_rectangles; i++)
   {
-    do
-    {
-      GdkRectangle *r = &rectangles[i];
-      gdk_draw_drawable(
-        widget->window,
-        widget->style->bg_gc[0],
-        priv->pixmap,
-        r->x,
-        r->y,
-        r->x,
-        r->y,
-        r->width,
-        r->height);
-      i++;
-    }
-    while (n_rectangles > i);
+    GdkRectangle *r = &rectangles[i];
+
+    gdk_draw_drawable(widget->window,
+                      widget->style->bg_gc[GTK_STATE_NORMAL], priv->pixmap,
+                      r->x, r->y, r->x, r->y, r->width, r->height);
   }
 
   g_free(rectangles);
 
   ct = gdk_cairo_create(widget->window);
-  cairo_rectangle(
-    ct,
-    event->area.x,
-    event->area.y,
-    event->area.width,
-    event->area.height);
+  cairo_rectangle(ct, event->area.x, event->area.y, event->area.width,
+                  event->area.height);
   cairo_clip(ct);
   pango_layout_set_text(priv->pango_layout, "kq", 1);
   pango_layout_get_pixel_size(priv->pango_layout, &i, &height);
-  i = 0;
+
   sub_layout = priv->sub_layout;
 
-  if (sub_layout->num_key_sections)
+
+  for (i = 0; i < sub_layout->num_key_sections; i++)
   {
-    while (1)
+    vkb_key_section *key_section = &sub_layout->key_sections[i];
+    int j;
+
+    for (j = 0; j < key_section->num_keys; j++)
     {
-      key_section = &sub_layout->key_sections[i];
-      if ( key_section->num_keys )
-        break;
-LABEL_42:
-      i++;
-      if ( sub_layout->num_key_sections <= i )
-        goto out;
-    }
+      vkb_key *key = &key_section->keys[j];
+      GdkRectangle src;
+      GdkRectangle dest;
+      gchar *tmp_text = NULL;
 
-    j = 0;
-    j = 0;
-
-    while (1)
-    {
-      if (priv->secondary_layout)
-      {
-        key = &key_section->keys[j];
-
-        if (key->num_sub_keys)
-          key = key->sub_keys;
-      }
-      else
-      {
-        key = &key_section->keys[j];
-      }
+      if (priv->secondary_layout && key->num_sub_keys)
+        key = key->sub_keys;
 
       src.x = key->left;
       src.y = key->top;
@@ -1790,9 +1750,9 @@ LABEL_42:
       src.height = key->bottom - key->top;
 
       if (!gdk_rectangle_intersect(&event->area, &src, &dest))
-        goto LABEL_28;
+        continue;
 
-      if ( key->key_flags & KEY_TYPE_DEAD )
+      if (key->key_flags & KEY_TYPE_DEAD)
         style = priv->special.gtk_style;
       else
         style = priv->normal.gtk_style;
@@ -1825,50 +1785,37 @@ LABEL_42:
                                  labels[current % byte_count], " ",
                                  labels[next % byte_count],
                                  NULL);
-
           text = tmp_text;
         }
         else
-        {
           text = labels[key->current_slide_key];
-          tmp_text = NULL;
-        }
       }
       else if ((key->key_type & KEY_TYPE_MULTIPLE) && key->sub_keys &&
                key->num_sub_keys > 1)
       {
         if (priv->secondary_layout)
-        {
           text = (gchar *)key->sub_keys[1].labels;
-          tmp_text = 0;
-        }
         else
-        {
           text = (gchar *)key->sub_keys->labels;
-          tmp_text = 0;
-        }
       }
       else
-      {
         text = (gchar *)key->labels;
-        tmp_text = 0;
-      }
 
       pango_layout_set_text(priv->pango_layout, text, strlen(text));
-      pango_layout_get_pixel_size(priv->pango_layout, (int*)&key->width, 0);
+      pango_layout_get_pixel_size(priv->pango_layout, (int *)&key->width, NULL);
 
       iter = pango_layout_get_iter(priv->pango_layout);
-      key->offset = height / 2 + (signed int)(key->bottom - key->top) / 2;
+      key->offset = height / 2 + (key->bottom - key->top) / 2;
       pango_layout_iter_free(iter);
 
       if ((key->key_type & KEY_TYPE_SLIDING) && key->byte_count > 2)
       {
-        cairo_move_to(ct,
-                      key->left + (key->right - key->left - key->width)/2,
-                      key->top + (key->bottom - key->top - key->offset)/2);
+        cairo_move_to(ct, key->left + (key->right - key->left - key->width) / 2,
+                      key->top + (key->bottom - key->top - key->offset) / 2);
 
         cairo_save(ct);
-        gdk_cairo_set_source_color(ct, &priv->slide.gtk_style->fg[4]);
+        gdk_cairo_set_source_color(
+              ct, &priv->slide.gtk_style->fg[GTK_STATE_INSENSITIVE]);
         pango_cairo_show_layout(ct, priv->pango_layout);
         cairo_restore(ct);
 
@@ -1888,18 +1835,11 @@ LABEL_42:
       }
 
       g_free(tmp_text);
-LABEL_28:
-      j++;
-      sub_layout = priv->sub_layout;
-      key_section = &sub_layout->key_sections[i];
-
-      if (j >= key_section->num_keys)
-        goto LABEL_42;
     }
   }
 
-out:
   cairo_destroy(ct);
+
   return TRUE;
 }
 
