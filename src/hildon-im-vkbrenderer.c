@@ -1361,15 +1361,12 @@ hildon_vkb_renderer_button_release(GtkWidget *widget, GdkEventButton *event)
         priv->sliding_key = pressed_key;
         hildon_vkb_renderer_input_slide(self, FALSE);
 
-        if (priv->pressed_key->current_slide_key >=
-            priv->pressed_key->byte_count - 1)
-        {
-          priv->pressed_key->current_slide_key = 0;
-        }
+        if (pressed_key->current_slide_key >= pressed_key->byte_count - 1)
+          pressed_key->current_slide_key = 0;
         else
-          priv->pressed_key->current_slide_key++;
+          pressed_key->current_slide_key++;
 
-        priv->pressed_key->width = 0;
+        pressed_key->width = 0;
         priv->sliding_key_timer =
             g_timeout_add(priv->sliding_key_timeout,
                           hildon_vkb_renderer_sliding_key_timeout,
@@ -1421,16 +1418,15 @@ hildon_vkb_renderer_button_release(GtkWidget *widget, GdkEventButton *event)
             hildon_vkb_renderer_input_key(self);
           }
 
-          priv->dead_key = 0;
+          priv->dead_key = NULL;
         }
         else
         {
           hildon_vkb_renderer_key_update(
                 self, pressed_key, GTK_STATE_ACTIVE, TRUE);
 
-          priv->dead_key = priv->pressed_key;
-          g_signal_emit(self, signals[COMBINING_INPUT], 0,
-                        priv->pressed_key->labels);
+          priv->dead_key = pressed_key;
+          g_signal_emit(self, signals[COMBINING_INPUT], 0, pressed_key->labels);
         }
       }
       else if (!is_shift_or_dead_key(pressed_key))
