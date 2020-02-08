@@ -184,12 +184,11 @@ hildon_vkb_renderer_clear(HildonVKBRenderer *self)
 }
 
 static void
-hildon_vkb_renderer_update_mode(HildonVKBRenderer *self, gboolean update_key)
+hildon_vkb_renderer_update_mode(HildonVKBRenderer *self, gboolean update_keys)
 {
   HildonVKBRendererPrivate *priv;
   vkb_sub_layout *sub_layout;
-
-  gboolean at_least_one = FALSE;
+  int i = 0;
 
   tracef;
   g_return_if_fail (HILDON_IS_VKB_RENDERER (self));
@@ -201,61 +200,55 @@ hildon_vkb_renderer_update_mode(HildonVKBRenderer *self, gboolean update_key)
   if (!sub_layout)
     return;
 
-  int section = 0;
-  int i = 0;
-  int j;
-
-  for (section = 0; section < sub_layout->num_key_sections; section++)
+  for (i = 0; i < sub_layout->num_key_sections; i++)
   {
-    vkb_key_section *key_section = &sub_layout->key_sections[section];
+    vkb_key_section *section = &sub_layout->key_sections[i];
+    int j;
 
-    for (i = 0; i < key_section->num_keys; i++)
+    for (j = 0; j < section->num_keys; j++)
     {
-      vkb_key *key = &key_section->keys[i];
+      vkb_key *key = &section->keys[j];
 
       if ((key->key_type & KEY_TYPE_HEXA) && key->sub_keys &&
           key->num_sub_keys > 1)
       {
-        GtkStateType sub_key_state;
+        GtkStateType skey_state;
+        int k;
 
         if (priv->secondary_layout)
-          sub_key_state = key->sub_keys[1].gtk_state;
+          skey_state = key->sub_keys[1].gtk_state;
         else
-          sub_key_state = key->sub_keys->gtk_state;
+          skey_state = key->sub_keys->gtk_state;
 
-        for (j = 0; j < key->num_sub_keys; j++)
+        for (k = 0; k < key->num_sub_keys; k++)
         {
-          vkb_key *sub_key = &key->sub_keys[j];
+          vkb_key *skey = &key->sub_keys[k];
 
-          if (sub_key->key_flags & priv->mode_bitmask &&
-              sub_key->labels && *sub_key->labels)
+          if (skey->key_flags & priv->mode_bitmask &&
+              skey->labels && *skey->labels)
           {
-            key->gtk_state = GTK_STATE_NORMAL;
+            skey->gtk_state = GTK_STATE_NORMAL;
           }
           else
-            key->gtk_state = GTK_STATE_INSENSITIVE;
+            skey->gtk_state = GTK_STATE_INSENSITIVE;
         }
 
         if (priv->secondary_layout)
         {
-          if (key->sub_keys[1].gtk_state == sub_key_state)
-            goto update;
+          if (key->sub_keys[1].gtk_state == skey_state)
+            continue;
         }
-        else
-        {
-          if (key->sub_keys->gtk_state == sub_key_state)
-            goto update;
-        }
+        else if (key->sub_keys->gtk_state == skey_state)
+            continue;
       }
       else
       {
         GtkStateType key_state = key->gtk_state;
+        int flags = key->key_flags & priv->mode_bitmask;
 
-        if ((key->key_flags & priv->mode_bitmask &&
-             (key->labels && (key->key_type == KEY_TYPE_SLIDING ||
-                              *key->labels))) ||
-            (key->key_flags & priv->mode_bitmask & (KEY_TYPE_TAB |
-                                                    KEY_TYPE_WHITESPACE)) ||
+        if ((flags && (key->labels &&
+                       (key->key_type == KEY_TYPE_SLIDING || *key->labels))) ||
+            (flags & (KEY_TYPE_TAB | KEY_TYPE_WHITESPACE)) ||
             (key->key_flags & KEY_TYPE_SHIFT))
         {
           key->gtk_state = GTK_STATE_NORMAL;
@@ -264,13 +257,10 @@ hildon_vkb_renderer_update_mode(HildonVKBRenderer *self, gboolean update_key)
           key->gtk_state = GTK_STATE_INSENSITIVE;
 
         if (key->gtk_state == key_state)
-          goto update;
+          continue;
       }
 
-      at_least_one = TRUE;
-
-update:
-      if (update_key && at_least_one)
+      if (update_keys)
         hildon_vkb_renderer_key_update(self, key, -1, TRUE);
     }
   }
