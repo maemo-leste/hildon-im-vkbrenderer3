@@ -1825,19 +1825,21 @@ hildon_vkb_renderer_button_press(GtkWidget *widget, GdkEventButton *event)
                 renderer, priv->pressed_key, GTK_STATE_ACTIVE, TRUE);
         }
 
-        if (priv->key_repeat_interval || key->key_type == KEY_TYPE_NORMAL)
+        if (key->key_type == KEY_TYPE_NORMAL)
         {
-          if (key->key_flags & 0x200 || is_shift_or_dead_key(key) ||
-              key->key_type == KEY_TYPE_NORMAL)
+          if (priv->key_repeat_interval)
           {
+            if (!(key->key_flags & 0x200) && !is_shift_or_dead_key(key))
+            {
+              priv->key_repeat_init_timer  =
+                  g_timeout_add(priv->key_repeat_interval + 625,
+                                hildon_vkb_renderer_key_repeat_init, widget);
+            }
+
             priv->x = event->x;
             priv->y = event->y;
             break;
           }
-
-          priv->key_repeat_init_timer =
-              g_timeout_add(priv->key_repeat_interval + 625,
-                            hildon_vkb_renderer_key_repeat_init, renderer);
         }
 
         priv->field_58 = 0;
