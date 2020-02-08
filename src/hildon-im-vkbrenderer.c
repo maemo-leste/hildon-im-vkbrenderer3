@@ -1450,84 +1450,61 @@ out:
 static void
 get_key_from_coordinates(HildonVKBRenderer *self, GdkEventMotion *event)
 {
-  int i,j;
-  vkb_key* key;
   HildonVKBRendererPrivate *priv;
-  tracef;
+  vkb_key *key;
+  int i, j;
 
+  tracef;
   g_return_if_fail(self);
 
   priv=HILDON_VKB_RENDERER_GET_PRIVATE(self);
 
-
   if (priv->sub_layout)
   {
-    if (priv->sub_layout->num_key_sections)
+    for (i = 0; i < priv->sub_layout->num_key_sections; i++)
     {
-      i = 0;
-
-      while (1)
-      {
-        if (priv->sub_layout->key_sections[i].num_keys)
-          break;
-LABEL_21:
-        i++;
-
-        if (priv->sub_layout->num_key_sections == i)
-          goto out;
-      }
-
-      j = 0;
-
-      while (1)
+      for (j = 0; j < priv->sub_layout->key_sections[i].num_keys; j++)
       {
         key = &priv->sub_layout->key_sections[i].keys[j];
 
         if (event->x > key->left && event->x <= key->right &&
             event->y > key->top && event->y <= key->bottom)
         {
-          break;
-        }
+          if (key->gtk_state != GTK_STATE_INSENSITIVE &&
+              key != priv->pressed_key && !priv->key_repeat_timer)
+          {
+            hildon_vkb_renderer_key_update(HILDON_VKB_RENDERER(self),
+                                           priv->pressed_key,
+                                           GTK_STATE_NORMAL, TRUE);
+            priv->pressed_key = key;
+            hildon_vkb_renderer_key_update(HILDON_VKB_RENDERER(self), key,
+                                           GTK_STATE_ACTIVE, TRUE);
 
-        ++j;
+            if (!(priv->pressed_key->key_type & KEY_TYPE_SLIDING))
+            {
+              g_signal_emit(
+                    HILDON_VKB_RENDERER(self), signals[TEMP_INPUT], 0,
+                    priv->pressed_key->labels, TRUE);
+            }
+          }
 
-        if (j == priv->sub_layout->key_sections[i].num_keys)
-          goto LABEL_21;
-
-      }
-
-      if (key->gtk_state != 4 && key != priv->pressed_key &&
-          !priv->key_repeat_timer)
-      {
-        hildon_vkb_renderer_key_update(HILDON_VKB_RENDERER(self),
-                                       priv->pressed_key, 0, 1);
-        priv->pressed_key = key;
-        hildon_vkb_renderer_key_update(
-              HILDON_VKB_RENDERER(self), key, 1, 1);
-
-        if (!(priv->pressed_key->key_type & 1))
-        {
-          g_signal_emit(HILDON_VKB_RENDERER(self), signals[TEMP_INPUT], 0,
-                        priv->pressed_key->labels, TRUE);
+          return;
         }
       }
-
-      return;
     }
   }
 
-out:
   if (priv->pressed_key)
   {
-    if (priv->pressed_key->gtk_state != 4)
+    if (priv->pressed_key->gtk_state != GTK_STATE_INSENSITIVE)
     {
       hildon_vkb_renderer_key_update(HILDON_VKB_RENDERER(self),
-                                     priv->pressed_key, 0, 1);
+                                     priv->pressed_key, GTK_STATE_NORMAL, TRUE);
 
-      if (!(priv->pressed_key->key_type & 1))
+      if (!(priv->pressed_key->key_type & KEY_TYPE_SLIDING))
       {
-        g_signal_emit(HILDON_VKB_RENDERER(self), signals[TEMP_INPUT], 0, NULL,
-                      TRUE);
+        g_signal_emit(
+              HILDON_VKB_RENDERER(self), signals[TEMP_INPUT], 0, NULL, TRUE);
       }
     }
   }
