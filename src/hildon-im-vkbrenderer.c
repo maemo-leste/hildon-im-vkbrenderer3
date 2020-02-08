@@ -1325,10 +1325,9 @@ hildon_vkb_renderer_button_release(GtkWidget *widget, GdkEventButton *event)
 {
   HildonVKBRenderer *self;
   HildonVKBRendererPrivate *priv;
-  gboolean b;
+  gboolean in_range = FALSE;
   vkb_key *pressed_key;
   int gesture_range;
-  int timer;
   vkb_key *dead_key;
   unsigned short key_flags;
   int shift;
@@ -1338,148 +1337,113 @@ hildon_vkb_renderer_button_release(GtkWidget *widget, GdkEventButton *event)
 
   self = HILDON_VKB_RENDERER(widget);
   priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
+  pressed_key = priv->pressed_key;
 
-  if (event->button != 1 || !priv->pressed_key || !priv->sub_layout)
+  if (event->button != 1 || !pressed_key || !priv->sub_layout)
     goto out;
 
   priv->field_C0 = FALSE;
-  pressed_key = priv->pressed_key;
   gesture_range = priv->gesture_range;
 
-  if(event->x <= ((int)pressed_key->left - gesture_range) ||
-     event->x > (pressed_key->right + gesture_range) ||
-     event->y <= ((int)pressed_key->top - gesture_range) ||
-     event->y > (pressed_key->bottom + gesture_range))
+  if (event->x > ((int)pressed_key->left - gesture_range) &&
+      event->x <= (pressed_key->right + gesture_range) &&
+      event->y > ((int)pressed_key->top - gesture_range) &&
+      event->y <= (pressed_key->bottom + gesture_range) &&
+      !priv->key_repeat_timer)
   {
-    b = 0;
-  }
-  else
-  {
-    timer = priv->key_repeat_timer;
+    in_range = TRUE;
 
-    if (timer)
+    if (!is_shift_or_dead_key(pressed_key))
     {
-      b = 0;
-LABEL_14:
-      g_source_remove(timer);
-      priv->key_repeat_timer = 0;
-      pressed_key = priv->pressed_key;
-      goto LABEL_15;
-    }
-
-    if (is_shift_or_dead_key(pressed_key))
-    {
-      b = 1;
-      goto LABEL_15;
-    }
-
-    if (priv->sliding_key_timeout && (pressed_key->key_type & KEY_TYPE_SLIDING))
-    {
-      priv->sliding_key = pressed_key;
-      hildon_vkb_renderer_input_slide(self, 0);
-
-      if (priv->pressed_key->current_slide_key >=
-          priv->pressed_key->byte_count - 1)
+      if (priv->sliding_key_timeout &&
+          (pressed_key->key_type & KEY_TYPE_SLIDING))
       {
-        priv->pressed_key->current_slide_key = 0;
+        priv->sliding_key = pressed_key;
+        hildon_vkb_renderer_input_slide(self, FALSE);
+
+        if (priv->pressed_key->current_slide_key >=
+            priv->pressed_key->byte_count - 1)
+        {
+          priv->pressed_key->current_slide_key = 0;
+        }
+        else
+          priv->pressed_key->current_slide_key++;
+
+        priv->pressed_key->width = 0;
+        priv->sliding_key_timer =
+            g_timeout_add(priv->sliding_key_timeout,
+                          hildon_vkb_renderer_sliding_key_timeout,
+                          widget);
       }
       else
-        priv->pressed_key->current_slide_key++;
-
-      priv->pressed_key->width = 0;
-      priv->sliding_key_timer = g_timeout_add(
-                                  priv->sliding_key_timeout,
-                                  hildon_vkb_renderer_sliding_key_timeout,
-                                  widget);
-      b = 1;
-    }
-    else
-    {
-      hildon_vkb_renderer_input_key(self);
-      b = 1;
+        hildon_vkb_renderer_input_key(self);
     }
   }
 
-  timer = priv->key_repeat_timer;
+  if (priv->key_repeat_timer)
+  {
+    g_source_remove(priv->key_repeat_timer);
+    priv->key_repeat_timer = 0;
+  }
 
-  if (timer)
-    goto LABEL_14;
-
-  pressed_key = priv->pressed_key;
-
-LABEL_15:
   if (pressed_key)
   {
     dead_key = priv->dead_key;
+    key_flags = pressed_key->key_flags;
+    shift = pressed_key->key_flags & KEY_TYPE_SHIFT;
 
-    if (dead_key && dead_key != pressed_key)
+    if (shift || !dead_key || dead_key == pressed_key)
     {
-      key_flags = pressed_key->key_flags;
-      shift = pressed_key->key_flags & KEY_TYPE_SHIFT;
-
-      if (pressed_key->key_flags & KEY_TYPE_SHIFT)
+      if ((shift == KEY_TYPE_SHIFT) && in_range)
       {
-LABEL_22:
-        if (shift == KEY_TYPE_SHIFT && b)
+        hildon_vkb_renderer_key_update(
+              self, pressed_key, GTK_STATE_NORMAL, TRUE);
+        hildon_vkb_renderer_input_key(self);
+      }
+      else if (key_flags & KEY_TYPE_DEAD && in_range)
+      {
+        if (priv->dead_key == pressed_key)
         {
           hildon_vkb_renderer_key_update(
-                self, pressed_key, (priv->shift_active = (!priv->shift_active)),
-                TRUE);
-          hildon_vkb_renderer_input_key(self);
+                self, pressed_key, GTK_STATE_NORMAL, TRUE);
+
+          if (priv->dead_key)
+          {
+            g_signal_emit(self, signals[COMBINING_INPUT], 0, NULL);
+            hildon_vkb_renderer_input_key(self);
+          }
+
+          priv->dead_key = 0;
         }
         else
         {
-          if (key_flags & KEY_TYPE_DEAD && b)
-          {
-            if (priv->dead_key == pressed_key)
-            {
-              hildon_vkb_renderer_key_update(self, pressed_key, 0, 1);
+          hildon_vkb_renderer_key_update(
+                self, pressed_key, GTK_STATE_ACTIVE, TRUE);
 
-              if (priv->dead_key)
-              {
-                g_signal_emit(self, signals[COMBINING_INPUT], 0, NULL);
-                hildon_vkb_renderer_input_key(self);
-              }
-
-              priv->dead_key = 0;
-            }
-            else
-            {
-              hildon_vkb_renderer_key_update(self, pressed_key, 1, 1);
-
-              priv->dead_key = priv->pressed_key;
-              g_signal_emit(self, signals[COMBINING_INPUT], 0,
-                            priv->pressed_key->labels);
-            }
-          }
-          else
-          {
-            if (!is_shift_or_dead_key(pressed_key))
-            {
-              hildon_vkb_renderer_key_update(self, pressed_key, 0, 1);
-              g_signal_emit(self, signals[TEMP_INPUT], 0, NULL, TRUE);
-            }
-          }
+          priv->dead_key = priv->pressed_key;
+          g_signal_emit(self, signals[COMBINING_INPUT], 0,
+                        priv->pressed_key->labels);
         }
-
-        goto out;
       }
-
-      if (!priv->field_20)
+      else if (!is_shift_or_dead_key(pressed_key))
       {
-        hildon_vkb_renderer_key_update(self, dead_key, 0, 1);
-        pressed_key = priv->pressed_key;
+        hildon_vkb_renderer_key_update(
+              self, pressed_key, GTK_STATE_NORMAL, TRUE);
+        g_signal_emit(self, signals[TEMP_INPUT], 0, NULL, TRUE);
       }
+    }
+    else
+    {
+      if (!priv->field_20)
+        hildon_vkb_renderer_key_update(self, dead_key, GTK_STATE_NORMAL, TRUE);
+
       priv->dead_key = 0;
     }
-
-    key_flags = pressed_key->key_flags;
-    shift = pressed_key->key_flags & KEY_TYPE_SHIFT;
-    goto LABEL_22;
   }
 
 out:
   hildon_vkb_renderer_release_cleanup(priv);
+
   return TRUE;
 }
 
