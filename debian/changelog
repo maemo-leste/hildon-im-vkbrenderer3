@@ -2,7 +2,7 @@ hildon-im-vkbrenderer3 (3.3.24-1) unstable; urgency=low
 
   * Port to imlayouts 1.5.16
 
- -- Merlijn Wajer <merlijn@wizzup.org>  Mon, 10 July 2018 23:36:00 +0200
+ -- Merlijn Wajer <merlijn@wizzup.org>  Mon, 10 Jul 2018 23:36:00 +0200
 
 hildon-im-vkbrenderer3 (3.3.23-1) unstable; urgency=low
 
