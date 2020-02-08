@@ -189,7 +189,7 @@ hildon_vkb_renderer_update_mode(HildonVKBRenderer *self, gboolean update_key)
   HildonVKBRendererPrivate *priv;
   vkb_sub_layout *sub_layout;
 
-  gboolean needs_update = FALSE;
+  gboolean at_least_one = FALSE;
 
   tracef;
   g_return_if_fail (HILDON_IS_VKB_RENDERER (self));
@@ -216,12 +216,12 @@ hildon_vkb_renderer_update_mode(HildonVKBRenderer *self, gboolean update_key)
       if ((key->key_type & KEY_TYPE_HEXA) && key->sub_keys &&
           key->num_sub_keys > 1)
       {
-        GtkStateType gtk_state;
+        GtkStateType sub_key_state;
 
         if (priv->secondary_layout)
-          gtk_state = key->sub_keys[1].gtk_state;
+          sub_key_state = key->sub_keys[1].gtk_state;
         else
-          gtk_state = key->sub_keys->gtk_state;
+          sub_key_state = key->sub_keys->gtk_state;
 
         for (j = 0; j < key->num_sub_keys; j++)
         {
@@ -238,18 +238,18 @@ hildon_vkb_renderer_update_mode(HildonVKBRenderer *self, gboolean update_key)
 
         if (priv->secondary_layout)
         {
-          if (key->sub_keys[1].gtk_state == gtk_state)
+          if (key->sub_keys[1].gtk_state == sub_key_state)
             goto update;
         }
         else
         {
-          if (key->sub_keys->gtk_state == gtk_state)
+          if (key->sub_keys->gtk_state == sub_key_state)
             goto update;
         }
       }
       else
       {
-        GtkStateType old_gtk_state = key->gtk_state;
+        GtkStateType key_state = key->gtk_state;
 
         if ((key->key_flags & priv->mode_bitmask &&
              (key->labels && (key->key_type == KEY_TYPE_SLIDING ||
@@ -263,14 +263,14 @@ hildon_vkb_renderer_update_mode(HildonVKBRenderer *self, gboolean update_key)
         else
           key->gtk_state = GTK_STATE_INSENSITIVE;
 
-        if (key->gtk_state == old_gtk_state)
+        if (key->gtk_state == key_state)
           goto update;
       }
 
-      needs_update = TRUE;
+      at_least_one = TRUE;
 
 update:
-      if (update_key && needs_update)
+      if (update_key && at_least_one)
         hildon_vkb_renderer_key_update(self, key, -1, TRUE);
     }
   }
