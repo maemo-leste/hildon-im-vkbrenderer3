@@ -1396,8 +1396,16 @@ hildon_vkb_renderer_button_release(GtkWidget *widget, GdkEventButton *event)
     {
       if ((shift == KEY_TYPE_SHIFT) && in_range)
       {
-        hildon_vkb_renderer_key_update(
-              self, pressed_key, GTK_STATE_NORMAL, TRUE);
+        GtkStateType state;
+
+        priv->shift_active = !priv->shift_active;
+
+        if (priv->shift_active)
+          state = GTK_STATE_ACTIVE;
+        else
+          state = GTK_STATE_NORMAL;
+
+        hildon_vkb_renderer_key_update(self, pressed_key, state, TRUE);
         hildon_vkb_renderer_input_key(self);
       }
       else if (key_flags & KEY_TYPE_DEAD && in_range)
