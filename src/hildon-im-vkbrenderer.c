@@ -188,7 +188,7 @@ hildon_vkb_renderer_update_mode(HildonVKBRenderer *self, gboolean update_key)
 {
   HildonVKBRendererPrivate *priv;
   vkb_sub_layout *sub_layout;
-  vkb_key *key;
+
   gboolean needs_update = FALSE;
 
   tracef;
@@ -198,66 +198,42 @@ hildon_vkb_renderer_update_mode(HildonVKBRenderer *self, gboolean update_key)
 
   sub_layout = priv->sub_layout;
 
-  if (sub_layout && sub_layout->num_key_sections)
+  if (!sub_layout)
+    return;
+
+  int section = 0;
+  int i = 0;
+  int j;
+
+  for (section = 0; section < sub_layout->num_key_sections; section++)
   {
-    vkb_key_section *key_section;
-    int section = 0;
-    int i = 0;
-    int j;
+    vkb_key_section *key_section = &sub_layout->key_sections[section];
 
-    while (1)
+    for (i = 0; i < key_section->num_keys; i++)
     {
-      key_section = &sub_layout->key_sections[section];
-
-      if (key_section->num_keys)
-        break;
-
-      section++;
-
-      if (sub_layout->num_key_sections <= section)
-        return;
-    }
-
-    while (1)
-    {
-      unsigned char gtk_state;
-
-      key = &key_section->keys[i];
+      vkb_key *key = &key_section->keys[i];
 
       if ((key->key_type & KEY_TYPE_HEXA) && key->sub_keys &&
           key->num_sub_keys > 1)
       {
+        GtkStateType gtk_state;
+
         if (priv->secondary_layout)
           gtk_state = key->sub_keys[1].gtk_state;
         else
           gtk_state = key->sub_keys->gtk_state;
 
-        if (key->num_sub_keys)
+        for (j = 0; j < key->num_sub_keys; j++)
         {
-          j = 0;
+          vkb_key *sub_key = &key->sub_keys[j];
 
-          while (1)
+          if (sub_key->key_flags & priv->mode_bitmask &&
+              sub_key->labels && *sub_key->labels)
           {
-            vkb_key *sub_key = &key->sub_keys[j];
-
-            if (sub_key->key_flags & priv->mode_bitmask &&
-                sub_key->labels && *sub_key->labels)
-            {
-              key->gtk_state = 0;
-              j++;
-
-              if (key->num_sub_keys <= j)
-                break;
-            }
-            else
-            {
-              key->gtk_state = 4;
-              j++;
-
-              if (key->num_sub_keys <= j)
-                break;
-            }
+            key->gtk_state = GTK_STATE_NORMAL;
           }
+          else
+            key->gtk_state = GTK_STATE_INSENSITIVE;
         }
 
         if (priv->secondary_layout)
@@ -273,39 +249,29 @@ hildon_vkb_renderer_update_mode(HildonVKBRenderer *self, gboolean update_key)
       }
       else
       {
-        unsigned char old_gtk_state = key->gtk_state;
+        GtkStateType old_gtk_state = key->gtk_state;
 
         if ((key->key_flags & priv->mode_bitmask &&
-             (key->labels && (key->key_type == KEY_TYPE_SLIDING || *key->labels))) ||
-            (key->key_flags & priv->mode_bitmask & (KEY_TYPE_TAB|KEY_TYPE_WHITESPACE)) ||
+             (key->labels && (key->key_type == KEY_TYPE_SLIDING ||
+                              *key->labels))) ||
+            (key->key_flags & priv->mode_bitmask & (KEY_TYPE_TAB |
+                                                    KEY_TYPE_WHITESPACE)) ||
             (key->key_flags & KEY_TYPE_SHIFT))
         {
-          key->gtk_state = 0;
+          key->gtk_state = GTK_STATE_NORMAL;
         }
         else
-          key->gtk_state = 4;
+          key->gtk_state = GTK_STATE_INSENSITIVE;
 
         if (key->gtk_state == old_gtk_state)
           goto update;
       }
 
       needs_update = TRUE;
+
 update:
       if (update_key && needs_update)
-      {
         hildon_vkb_renderer_key_update(self, key, -1, TRUE);
-        key_section = &sub_layout->key_sections[section];
-      }
-
-      i++;
-
-      if (key_section->num_keys <= i)
-      {
-        section++;
-
-        if (sub_layout->num_key_sections <= section)
-          return;
-      }
     }
   }
 }
@@ -329,7 +295,8 @@ hildon_vkb_renderer_update_pixmap(HildonVKBRenderer *self)
 }
 
 static gboolean
-hildon_vkb_renderer_load_layout(HildonVKBRenderer *self, int layout)
+hildon_vkb_renderer_load_layout(HildonVKBRenderer *self,
+                                gboolean load_sub_layout)
 {
   HildonVKBRendererPrivate *priv;
 
@@ -338,61 +305,59 @@ hildon_vkb_renderer_load_layout(HildonVKBRenderer *self, int layout)
 
   priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
 
-  if (priv->layout_collection)
+  if (!priv->layout_collection)
+    return FALSE;
+
+  if (!priv->layout)
   {
+    priv->layout = imlayout_vkb_get_layout(priv->layout_collection,
+                                           priv->layout_type);
+
     if (!priv->layout)
     {
-      priv->layout = imlayout_vkb_get_layout(priv->layout_collection,
-                                             priv->layout_type);
+      g_warning("Set layout type does not exist in current collection,"
+                " will load default layout in current collection\n");
+
+      priv->layout =
+          imlayout_vkb_get_layout(priv->layout_collection,
+                                  *priv->layout_collection->layout_types);
 
       if (!priv->layout)
-      {
-        g_warning("Set layout type does not exist in current collection,"
-                  " will load default layout in current collection\n");
-
-        priv->layout = imlayout_vkb_get_layout(
-              priv->layout_collection,
-              *priv->layout_collection->layout_types);
-
-        if (!priv->layout)
-          goto error;
-      }
-    }
-
-    if (!layout || priv->sub_layout)
-      return TRUE;
-
-    hildon_vkb_renderer_clear(self);
-
-    if (priv->num_sub_layouts >= priv->layout->num_sub_layouts)
-    {
-      g_warning("Set sublayout type does not exist in current layout,"
-                " will load default sublayout in current layout\n");
-      priv->sub_layout = priv->layout->sub_layouts;
-      priv->num_sub_layouts = 0;
-    }
-    else
-      priv->sub_layout = &priv->layout->sub_layouts[priv->num_sub_layouts];
-
-    if (priv->sub_layout)
-    {
-      hildon_vkb_renderer_update_pixmap(self);
-
-      if (priv->WC_language)
-      {
-        imlayout_vkb_free_layout(priv->WC_language);
-        priv->WC_language = NULL;
-      }
-
-      priv->current_sub_layout = NULL;
-      return TRUE;
-    }
-    else
-    {
-error:
-      g_warning("Loading default layout fails\n");
+        goto error;
     }
   }
+
+  if (!load_sub_layout || priv->sub_layout)
+    return TRUE;
+
+  hildon_vkb_renderer_clear(self);
+
+  if (priv->num_sub_layouts >= priv->layout->num_sub_layouts)
+  {
+    g_warning("Set sublayout type does not exist in current layout,"
+              " will load default sublayout in current layout\n");
+    priv->sub_layout = priv->layout->sub_layouts;
+    priv->num_sub_layouts = 0;
+  }
+  else
+    priv->sub_layout = &priv->layout->sub_layouts[priv->num_sub_layouts];
+
+  if (priv->sub_layout)
+  {
+    hildon_vkb_renderer_update_pixmap(self);
+
+    if (priv->WC_language)
+    {
+      imlayout_vkb_free_layout(priv->WC_language);
+      priv->WC_language = NULL;
+    }
+
+    priv->current_sub_layout = NULL;
+    return TRUE;
+  }
+
+error:
+    g_warning("Loading default layout fails\n");
 
   return FALSE;
 }
@@ -409,7 +374,7 @@ hildon_vkb_renderer_get_numeric_sub(HildonVKBRenderer *renderer)
 
   if (!priv->layout)
   {
-    hildon_vkb_renderer_load_layout(renderer, LAYOUT_TYPE_NORMAL);
+    hildon_vkb_renderer_load_layout(renderer, TRUE);
 
     if (!priv->layout)
       return -1;
@@ -429,7 +394,7 @@ hildon_vkb_renderer_set_variance_layout(HildonVKBRenderer *renderer)
   priv = HILDON_VKB_RENDERER_GET_PRIVATE(renderer);
 
   if(!priv->sub_layout)
-    hildon_vkb_renderer_load_layout(renderer, 1);
+    hildon_vkb_renderer_load_layout(renderer, TRUE);
 
   if (priv->sub_layout && !(priv->sub_layout->variance_index & 0x80))
   {
@@ -694,7 +659,7 @@ hildon_vkb_renderer_get_property(GObject *object, guint prop_id, GValue *value,
       break;
     case HILDON_VKB_RENDERER_PROP_SUBLAYOUTS:
       if (!priv->layout &&
-          !hildon_vkb_renderer_load_layout(HILDON_VKB_RENDERER(object), 1))
+          !hildon_vkb_renderer_load_layout(HILDON_VKB_RENDERER(object), TRUE))
       {
         g_value_set_pointer(value, NULL);
         break;
@@ -753,7 +718,7 @@ hildon_vkb_renderer_get_property(GObject *object, guint prop_id, GValue *value,
       break;
     case HILDON_VKB_RENDERER_PROP_SUBLAYOUT:
       if (!priv->sub_layout &&
-          !hildon_vkb_renderer_load_layout(HILDON_VKB_RENDERER(object), 1))
+          !hildon_vkb_renderer_load_layout(HILDON_VKB_RENDERER(object), TRUE))
       {
         g_value_set_int(value, 0);
       }
@@ -768,7 +733,7 @@ hildon_vkb_renderer_get_property(GObject *object, guint prop_id, GValue *value,
       break;
     case HILDON_VKB_RENDERER_PROP_LAYOUT:
       if (priv->layout ||
-          hildon_vkb_renderer_load_layout(HILDON_VKB_RENDERER(object), 1))
+          hildon_vkb_renderer_load_layout(HILDON_VKB_RENDERER(object), TRUE))
         g_value_set_int(value, priv->layout_type);
       else
         g_value_set_int(value, 0);
@@ -1703,7 +1668,7 @@ hildon_vkb_renderer_expose(GtkWidget *widget, GdkEventExpose *event)
   self = HILDON_VKB_RENDERER(widget);
   priv = HILDON_VKB_RENDERER_GET_PRIVATE(self);
 
-  if (!((priv->sub_layout || hildon_vkb_renderer_load_layout(self, 1) ||
+  if (!((priv->sub_layout || hildon_vkb_renderer_load_layout(self, TRUE) ||
          priv->sub_layout) && priv->pixmap))
   {
     return FALSE;
@@ -2332,14 +2297,14 @@ hildon_vkb_renderer_set_sublayout_type(HildonVKBRenderer *renderer,
 
   priv = HILDON_VKB_RENDERER_GET_PRIVATE(renderer);
 
-  if(priv->layout)
+  if (priv->layout)
   {
     if (priv->sub_layout && priv->sub_layout->type == sub_layout_type)
       return;
   }
   else
   {
-    if (!hildon_vkb_renderer_load_layout(renderer, 0))
+    if (!hildon_vkb_renderer_load_layout(renderer, FALSE))
       return;
   }
 
@@ -2355,12 +2320,12 @@ hildon_vkb_renderer_set_sublayout_type(HildonVKBRenderer *renderer,
       {
         i++;
 
-        if(i == priv->layout->num_sub_layouts)
+        if (i == priv->layout->num_sub_layouts)
           break;
 
         sub_layout++;
 
-        if(sub_layout->type == sub_layout_type)
+        if (sub_layout->type == sub_layout_type)
         {
           g_object_set(renderer, "sub", i, NULL);
           break;
@@ -2369,10 +2334,10 @@ hildon_vkb_renderer_set_sublayout_type(HildonVKBRenderer *renderer,
     }
   }
 
-  if(!priv->sub_layout)
-    hildon_vkb_renderer_load_layout(renderer, 1);
+  if (!priv->sub_layout)
+    hildon_vkb_renderer_load_layout(renderer, TRUE);
 
-  if(priv->layout->num_sub_layouts != i)
+  if (priv->layout->num_sub_layouts != i)
     gtk_widget_queue_draw(GTK_WIDGET(renderer));
 }
 
