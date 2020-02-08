@@ -1510,12 +1510,12 @@ get_key_from_coordinates(HildonVKBRenderer *self, GdkEventMotion *event)
   }
 }
 
-static gint
+static gboolean
 hildon_vkb_renderer_motion_notify(GtkWidget *widget, GdkEventMotion *event)
 {
+  HildonVKBRendererPrivate *priv;
   int diff_x;
   int diff_y;
-  HildonVKBRendererPrivate *priv;
 
   tracef;
   g_return_val_if_fail(HILDON_IS_VKB_RENDERER(widget),1);
@@ -1567,7 +1567,7 @@ hildon_vkb_renderer_motion_notify(GtkWidget *widget, GdkEventMotion *event)
     }
   }
 
-  get_key_from_coordinates(HILDON_VKB_RENDERER(widget),event);
+  get_key_from_coordinates(HILDON_VKB_RENDERER(widget), event);
 
   if (priv->field_58)
   {
@@ -1575,7 +1575,7 @@ hildon_vkb_renderer_motion_notify(GtkWidget *widget, GdkEventMotion *event)
     priv->y = event->y;
   }
 
-  return 1;
+  return TRUE;
 }
 
 static gboolean
@@ -1748,168 +1748,100 @@ hildon_vkb_renderer_expose(GtkWidget *widget, GdkEventExpose *event)
 static gboolean
 hildon_vkb_renderer_button_press(GtkWidget *widget, GdkEventButton *event)
 {
-  vkb_key_section *section;
-  int i,j;
+  HildonVKBRenderer *renderer;
   HildonVKBRendererPrivate *priv;
-  unsigned int num_keys;
+  int i, j;
 
   tracef;
-  g_return_val_if_fail(HILDON_IS_VKB_RENDERER(widget),TRUE);
+  g_return_val_if_fail(HILDON_IS_VKB_RENDERER(widget), TRUE);
 
-  priv = HILDON_VKB_RENDERER_GET_PRIVATE(HILDON_VKB_RENDERER(widget));
+  renderer = HILDON_VKB_RENDERER(widget);
+  priv = HILDON_VKB_RENDERER_GET_PRIVATE(renderer);
 
-  if (event->button == 1 && priv->sub_layout)
+  if (event->button != 1 || !priv->sub_layout)
+    return TRUE;
+
+  if (priv->key_repeat_init_timer)
   {
-    if (priv->key_repeat_init_timer)
+    g_source_remove(priv->key_repeat_init_timer);
+    priv->key_repeat_init_timer = 0;
+  }
+
+  if (priv->key_repeat_timer)
+  {
+    g_source_remove(priv->key_repeat_timer);
+    priv->key_repeat_timer = 0;
+  }
+
+  if (priv->sliding_key_timer)
+  {
+    g_source_remove(priv->sliding_key_timer);
+    priv->sliding_key_timer = 0;
+  }
+
+  for (i = 0; i < priv->sub_layout->num_key_sections; i++)
+  {
+    vkb_key_section *key_section = &priv->sub_layout->key_sections[i];
+
+    for (j = 0; j < key_section->num_keys; j++)
     {
-      g_source_remove(priv->key_repeat_init_timer);
-      priv->key_repeat_init_timer = 0;
-    }
+      vkb_key *key = &key_section->keys[j];
 
-    if (priv->key_repeat_timer)
-    {
-      g_source_remove(priv->key_repeat_timer);
-      priv->key_repeat_timer = 0;
-    }
-
-    if (priv->sliding_key_timer)
-    {
-      g_source_remove(priv->sliding_key_timer);
-      priv->sliding_key_timer = 0;
-    }
-
-    if (priv->sub_layout->num_key_sections)
-    {
-      int section_index = 0;
-
-      section = priv->sub_layout->key_sections;
-      num_keys = section->num_keys;
-
-      if (!num_keys)
-        goto LABEL_22;
-
-LABEL_12:
-      i = 0;
-      j = 0;
-
-      while (1)
+      if (event->x > key->left && event->x <= key->right &&
+          event->y > key->top && event->y <= key->bottom)
       {
-        vkb_key *key = &section->keys[j];
-        vkb_key *tmp_key;
-
-        if (event->x <= key->left  || key->right < event->x)
-          goto LABEL_14;
-
-        if (event->y > key->top)
+        if (key->gtk_state == GTK_STATE_INSENSITIVE)
         {
-          if (key->bottom >= event->y)
-          {
-            if (key->gtk_state == 4)
-            {
-              g_signal_emit(widget, signals[ILLEGAL_INPUT], 0,
-                            key->key_type & KEY_TYPE_SLIDING ?
-                              key->labels[0] : (gchar *)key->labels);
-              return TRUE;
-            }
+          gpointer label;
 
-            priv->pressed_key = key;
+          if (key->key_type & KEY_TYPE_SLIDING)
+            label = *key->labels;
+          else
+            label = key->labels;
 
-            if (!(key->key_type & KEY_TYPE_SLIDING) &&
-                !(key->key_flags & KEY_TYPE_SHIFT))
-            {
-              g_signal_emit(HILDON_VKB_RENDERER(widget), signals[TEMP_INPUT], 0,
-                            key->labels, TRUE);
-            }
-
-            if (priv->sliding_key)
-            {
-              tmp_key = priv->pressed_key;
-
-              if (priv->sliding_key != tmp_key)
-              {
-                hildon_vkb_renderer_input_slide(HILDON_VKB_RENDERER(widget), 1);
-                tmp_key = priv->pressed_key;
-              }
-            }
-            else
-              tmp_key = priv->pressed_key;
-
-            if (!is_shift_or_dead_key(tmp_key))
-            {
-              hildon_vkb_renderer_key_update(HILDON_VKB_RENDERER(widget),
-                                             tmp_key, 1, 1);
-              tmp_key = priv->pressed_key;
-            }
-
-            if (priv->key_repeat_interval)
-            {
-              if (!tmp_key->key_type)
-              {
-                if (!((tmp_key->key_flags >> 8) & 2) &&
-                    !is_shift_or_dead_key(tmp_key))
-                {
-                  priv->key_repeat_init_timer =
-                      g_timeout_add(priv->key_repeat_interval + 625,
-                                    hildon_vkb_renderer_key_repeat_init,
-                                    widget);
-                  tmp_key = priv->pressed_key;
-                  goto LABEL_38;
-                }
-LABEL_35:
-                priv->x = event->x;
-                priv->y = event->y;
-                goto LABEL_19;
-              }
-            }
-            else
-            {
-LABEL_38:
-              if ( !tmp_key->key_type )
-                goto LABEL_35;
-            }
-            priv->field_58 = FALSE;
-            goto LABEL_19;
-          }
-LABEL_14:
-          i++;
-          j = i;
-
-          if (i == num_keys)
-          {
-LABEL_19:
-            while (1)
-            {
-              if (j != priv->sub_layout->key_sections[section_index].num_keys)
-                return 1;
-
-              section_index++;
-
-              if (priv->sub_layout->num_key_sections <= section_index)
-                return 1;
-
-              section = &priv->sub_layout->key_sections[section_index];
-              num_keys = priv->sub_layout->key_sections[section_index].num_keys;
-
-              if (num_keys)
-                goto LABEL_12;
-LABEL_22:
-              j = 0;
-            }
-          }
+          g_signal_emit(renderer, signals[ILLEGAL_INPUT], 0, label);
+          return TRUE;
         }
-        else
+
+        priv->pressed_key = key;
+
+        if (!(key->key_type & KEY_TYPE_SLIDING) &&
+            !(key->key_flags & KEY_TYPE_SHIFT))
         {
-          i++;
-          j = i;
-
-          if (i == num_keys)
-            goto LABEL_19;
+          g_signal_emit(renderer, signals[TEMP_INPUT], 0,
+                        priv->pressed_key->labels, TRUE);
         }
+
+        if (priv->sliding_key && priv->sliding_key != key)
+          hildon_vkb_renderer_input_slide(renderer, TRUE);
+
+        if (!is_shift_or_dead_key(key))
+        {
+          hildon_vkb_renderer_key_update(
+                renderer, priv->pressed_key, GTK_STATE_ACTIVE, TRUE);
+        }
+
+        if (priv->key_repeat_interval || key->key_type == KEY_TYPE_NORMAL)
+        {
+          if (key->key_flags & 0x200 || is_shift_or_dead_key(key) ||
+              key->key_type == KEY_TYPE_NORMAL)
+          {
+            priv->x = event->x;
+            priv->y = event->y;
+            break;
+          }
+
+          priv->key_repeat_init_timer =
+              g_timeout_add(priv->key_repeat_interval + 625,
+                            hildon_vkb_renderer_key_repeat_init, renderer);
+        }
+
+        priv->field_58 = 0;
       }
     }
   }
 
-  return 1;
+  return TRUE;
 }
 
 static void
