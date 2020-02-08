@@ -1,8 +1,6 @@
-AM_CPPFLAGS = \
-	$(DEPS_CFLAGS)
+AM_CPPFLAGS = $(DEPS_CFLAGS)
 
-libhildon_im_vkbrenderer_LTLIBRARIES = libhildon-im-vkbrenderer.la
-libhildon_im_vkbrendererdir = /usr/lib
+lib_LTLIBRARIES = libhildon-im-vkbrenderer.la
 
 libhildon_im_vkbrenderer_la_SOURCES = \
 	hildon-im-vkbrenderer.c \
@@ -28,6 +26,12 @@ hildon-vkb-renderer-marshal.c: hildon-vkb-renderer-marshal.list
 BUILT_SOURCES = \
 	hildon-vkb-renderer-marshal.h \
 	hildon-vkb-renderer-marshal.c
+
+install-exec-hook:
+	$(AM_V_at)$(MKDIR_P) $(DESTDIR)/$(himwidgetsdir)
+	$(AM_V_at)$(LN_S) \
+		$(libdir)/libhildon-im-vkbrenderer.so.$(LIBHILDONIMVKBRENDERER_LIB_VERSION) \
+		$(DESTDIR)/$(himwidgetsdir)/vkbrenderer.so
 
 CLEANFILES = $(BUILT_SOURCES)
 

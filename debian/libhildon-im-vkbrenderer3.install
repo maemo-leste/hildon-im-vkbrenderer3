@@ -1,1 +1,4 @@
-usr/lib/lib*.so.*
+#!/usr/bin/dh-exec
+
+usr/lib/${DEB_HOST_MULTIARCH}/lib*.so.*
+${himwidgetsdir}/*.so

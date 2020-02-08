@@ -1,3 +1,5 @@
+#!/usr/bin/dh-exec
+
 usr/include/hildon-im-vkbrenderer/3/*
-usr/lib/lib*.so
-usr/lib/pkgconfig/*
+usr/lib/${DEB_HOST_MULTIARCH}/lib*.so
+usr/lib/${DEB_HOST_MULTIARCH}/pkgconfig/*
