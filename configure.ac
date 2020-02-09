@@ -24,6 +24,8 @@ AC_HEADER_STDC
 AC_PROG_LN_S
 AC_PROG_MKDIR_P
 
+CFLAGS="$CFLAGS -Werror -Wall"
+
 PKG_CHECK_VAR([GLIB_GENMARSHAL], [glib-2.0], [glib_genmarshal])
 
 PKG_CHECK_MODULES(DEPS, gtk+-2.0 >= 2.4.0 gconf-2.0 > 2.0 glib-2.0 >= 2.20.3 x11 imlayouts)
