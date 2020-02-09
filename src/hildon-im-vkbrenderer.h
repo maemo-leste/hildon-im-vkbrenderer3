@@ -48,6 +48,14 @@ struct _HildonVKBRendererClass
   void (*illegal_input) (HildonVKBRenderer*, gchar*);
 };
 
+struct _HildonVKBRendererLayoutInfo
+{
+  guint num_layouts;
+  guint *type;
+  gchar **label;
+  guint num_rows;
+};
+
 /* exports */
 GType hildon_vkb_renderer_get_type (void);
 

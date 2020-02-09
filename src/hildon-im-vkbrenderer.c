@@ -107,14 +107,6 @@ struct _HildonVKBRendererPrivate
   gboolean shift_active;
 };
 
-struct _HildonVKBRendererLayoutInfo
-{
-  guint num_layouts;
-  guint *type;
-  gchar **label;
-  guint num_rows;
-};
-
 #define HILDON_VKB_RENDERER_GET_PRIVATE(renderer) \
   ((HildonVKBRendererPrivate *)hildon_vkb_renderer_get_instance_private(renderer))
 
