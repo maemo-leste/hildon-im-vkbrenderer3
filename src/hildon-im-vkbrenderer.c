@@ -53,7 +53,7 @@ enum
 };
 
 static guint
-signals[LAST_SIGNAL] = { 0, };
+signals[LAST_SIGNAL] = { 0 };
 
 
 #if 0
@@ -64,8 +64,8 @@ signals[LAST_SIGNAL] = { 0, };
 
 typedef struct {
  gchar *style;
- GtkStyle* gtk_style;
-}HildonVKBRendererKeyStyle;
+ GtkStyle *gtk_style;
+} HildonVKBRendererKeyStyle;
 
 struct _HildonVKBRendererPrivate
 {
@@ -77,22 +77,19 @@ struct _HildonVKBRendererPrivate
   int mode_bitmask;
   guint layout_type;
   guint num_sub_layouts;
-  gboolean field_20;
+  gboolean sub_layout_changed;
   gboolean secondary_layout;
   gboolean paint_pixmap_pending;
-  PangoLayout* pango_layout;
+  PangoLayout *pango_layout;
   GdkPixmap *pixmap;
   GtkRequisition requisition;
-  vkb_key* pressed_key;
-  vkb_key* dead_key;
+  vkb_key *pressed_key;
+  vkb_key *dead_key;
   gdouble x;
   gdouble y;
   gboolean field_58;
-  gboolean field_5C;
-  gboolean field_60;
-  gboolean field_64;
   int gesture_range;
-  vkb_key* sliding_key;
+  vkb_key *sliding_key;
   guint sliding_key_timer;
   guint sliding_key_timeout;
   HildonVKBRendererKeyStyle normal;
@@ -504,16 +501,13 @@ hildon_vkb_renderer_init (HildonVKBRenderer *self)
   priv->current_sub_layout = NULL;
   priv->mode_bitmask = 0;
   priv->layout_type = 0;
-  priv->field_20 = FALSE;
+  priv->sub_layout_changed = FALSE;
   priv->paint_pixmap_pending = FALSE;
   priv->pixmap = NULL;
   priv->pressed_key = NULL;
   priv->x = 0;
   priv->y = 0;
   priv->field_58 = TRUE;
-  priv->field_5C = FALSE;
-  priv->field_60 = FALSE;
-  priv->field_64 = TRUE;
   priv->sliding_key_timer = 0;
   priv->normal.style  = NULL;
   priv->special.style = NULL;
@@ -565,10 +559,7 @@ hildon_vkb_renderer_release_cleanup(HildonVKBRendererPrivate *priv)
   priv->x = 0;
   priv->y = 0;
   priv->field_58 = TRUE;
-  priv->field_5C = FALSE;
-  priv->field_60 = FALSE;
-  priv->field_64 = TRUE;
-  priv->field_20 = FALSE;
+  priv->sub_layout_changed = FALSE;
 }
 
 void
@@ -844,7 +835,7 @@ hildon_vkb_renderer_set_property(GObject *object, guint prop_id,
       if (priv->sub_layout)
       {
         priv->current_sub_layout = priv->sub_layout;
-        priv->field_20 = TRUE;
+        priv->sub_layout_changed = TRUE;
       }
 
       priv->sub_layout = NULL;
@@ -967,7 +958,7 @@ hildon_vkb_renderer_paint_pixmap(HildonVKBRenderer *self)
       {
         key->gtk_state = GTK_STATE_ACTIVE;
         priv->dead_key->gtk_state = GTK_STATE_ACTIVE;
-        priv->field_20 = FALSE;
+        priv->sub_layout_changed = FALSE;
       }
 
       hildon_vkb_renderer_key_update(self, key, -1, FALSE);
@@ -1438,7 +1429,7 @@ hildon_vkb_renderer_button_release(GtkWidget *widget, GdkEventButton *event)
     }
     else
     {
-      if (!priv->field_20)
+      if (!priv->sub_layout_changed)
         hildon_vkb_renderer_key_update(self, dead_key, GTK_STATE_NORMAL, TRUE);
 
       priv->dead_key = 0;
@@ -1842,7 +1833,7 @@ hildon_vkb_renderer_button_press(GtkWidget *widget, GdkEventButton *event)
           }
         }
 
-        priv->field_58 = 0;
+        priv->field_58 = FALSE;
       }
     }
   }
@@ -2222,8 +2213,8 @@ hildon_vkb_renderer_clear_dead_key(HildonVKBRenderer *renderer)
 
   if(priv->dead_key)
   {
-    if (priv->field_20)
-      priv->field_20 = FALSE;
+    if (priv->sub_layout_changed)
+      priv->sub_layout_changed = FALSE;
     else
       hildon_vkb_renderer_key_update(renderer, priv->dead_key, 0, 1);
 
