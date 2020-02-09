@@ -87,7 +87,7 @@ struct _HildonVKBRendererPrivate
   vkb_key *dead_key;
   gdouble x;
   gdouble y;
-  gboolean field_58;
+  gboolean track_position;
   int gesture_range;
   vkb_key *sliding_key;
   guint sliding_key_timer;
@@ -103,7 +103,7 @@ struct _HildonVKBRendererPrivate
   guint key_repeat_timer;
   guint key_repeat_interval;
   PangoFontDescription *font_desc;
-  gboolean field_C0;
+  gboolean max_distance_exceeded;
   gboolean shift_active;
 };
 
@@ -507,7 +507,7 @@ hildon_vkb_renderer_init (HildonVKBRenderer *self)
   priv->pressed_key = NULL;
   priv->x = 0;
   priv->y = 0;
-  priv->field_58 = TRUE;
+  priv->track_position = TRUE;
   priv->sliding_key_timer = 0;
   priv->normal.style  = NULL;
   priv->special.style = NULL;
@@ -518,7 +518,7 @@ hildon_vkb_renderer_init (HildonVKBRenderer *self)
   priv->shift.style = NULL;
   priv->key_repeat_init_timer = 0;
   priv->key_repeat_timer = 0;
-  priv->field_C0 = FALSE;
+  priv->max_distance_exceeded = FALSE;
   priv->shift_active = FALSE;
 
   g_signal_connect(self, "style-set", G_CALLBACK(theme_changed), self);
@@ -558,7 +558,7 @@ hildon_vkb_renderer_release_cleanup(HildonVKBRendererPrivate *priv)
   priv->pressed_key = NULL;
   priv->x = 0;
   priv->y = 0;
-  priv->field_58 = TRUE;
+  priv->track_position = TRUE;
   priv->sub_layout_changed = FALSE;
 }
 
@@ -1333,7 +1333,7 @@ hildon_vkb_renderer_button_release(GtkWidget *widget, GdkEventButton *event)
   if (event->button != 1 || !pressed_key || !priv->sub_layout)
     goto out;
 
-  priv->field_C0 = FALSE;
+  priv->max_distance_exceeded = FALSE;
   gesture_range = priv->gesture_range;
 
   if (event->x > ((int)pressed_key->left - gesture_range) &&
@@ -1513,7 +1513,7 @@ hildon_vkb_renderer_motion_notify(GtkWidget *widget, GdkEventMotion *event)
   int diff_y;
 
   tracef;
-  g_return_val_if_fail(HILDON_IS_VKB_RENDERER(widget),1);
+  g_return_val_if_fail(HILDON_IS_VKB_RENDERER(widget), TRUE);
 
   priv = HILDON_VKB_RENDERER_GET_PRIVATE(HILDON_VKB_RENDERER(widget));
 
@@ -1535,7 +1535,7 @@ hildon_vkb_renderer_motion_notify(GtkWidget *widget, GdkEventMotion *event)
     {
       g_source_remove(priv->key_repeat_timer);
       priv->key_repeat_timer = 0;
-      priv->field_58 = FALSE;
+      priv->track_position = FALSE;
     }
 
     priv->sliding_key = 0;
@@ -1552,19 +1552,19 @@ hildon_vkb_renderer_motion_notify(GtkWidget *widget, GdkEventMotion *event)
 
     if(diff_x > 50 || diff_y > 50)
     {
-      if (!priv->field_C0)
+      if (!priv->max_distance_exceeded)
       {
-        priv->field_C0 = TRUE;
+        priv->max_distance_exceeded = TRUE;
         hildon_vkb_renderer_input_key(HILDON_VKB_RENDERER(widget));
       }
 
-      priv->field_58 = FALSE;
+      priv->track_position = FALSE;
     }
   }
 
   get_key_from_coordinates(HILDON_VKB_RENDERER(widget), event);
 
-  if (priv->field_58)
+  if (priv->track_position)
   {
     priv->x = event->x;
     priv->y = event->y;
@@ -1833,7 +1833,7 @@ hildon_vkb_renderer_button_press(GtkWidget *widget, GdkEventButton *event)
           }
         }
 
-        priv->field_58 = FALSE;
+        priv->track_position = FALSE;
       }
     }
   }
