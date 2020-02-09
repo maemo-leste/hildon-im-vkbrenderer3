@@ -1,3 +1,10 @@
+hildon-im-vkbrenderer3 (3.3.25-1) unstable; urgency=low
+
+  * Cleanup the code
+  * port to debhelper 10
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Sun, 09 Feb 2020 07:46:41 +0200
+
 hildon-im-vkbrenderer3 (3.3.24-1) unstable; urgency=low
 
   * Port to imlayouts 1.5.16
