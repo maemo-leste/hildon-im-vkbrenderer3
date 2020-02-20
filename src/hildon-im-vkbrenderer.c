@@ -2282,7 +2282,7 @@ hildon_vkb_renderer_key_repeat_init(void *data)
   HildonVKBRendererPrivate *priv;
 
   tracef;
-  g_return_val_if_fail(HILDON_IS_VKB_RENDERER(data),FALSE);
+  g_return_val_if_fail(HILDON_IS_VKB_RENDERER(data), FALSE);
 
   priv = HILDON_VKB_RENDERER_GET_PRIVATE(HILDON_VKB_RENDERER(data));
 
@@ -2294,8 +2294,9 @@ hildon_vkb_renderer_key_repeat_init(void *data)
                                data);
 
     hildon_vkb_renderer_input_key(HILDON_VKB_RENDERER(data));
-    priv->key_repeat_init_timer = 0;
   }
+
+  priv->key_repeat_init_timer = 0;
 
   return FALSE;
 }
