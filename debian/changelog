@@ -1,3 +1,9 @@
+hildon-im-vkbrenderer3 (3.3.27-1) unstable; urgency=low
+
+  * Fix "Source ID XXX was not found when attempting to remove it" error
+
+ -- Ivaylo Dimitrov <ivo.g.dimitrov.75@gmail.com>  Thu, 20 Feb 2020 17:08:52 +0200
+
 hildon-im-vkbrenderer3 (3.3.26-1) unstable; urgency=low
 
   * make struct HildonVKBRendererClass public again
